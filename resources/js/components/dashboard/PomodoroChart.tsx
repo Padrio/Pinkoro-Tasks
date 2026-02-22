@@ -15,7 +15,7 @@ export default function PomodoroChart({ data }: PomodoroChartProps) {
         <div className="glass p-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Fokuszeit (Minuten)</h3>
             <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                     <AreaChart data={formatted}>
                         <defs>
                             <linearGradient id="pomodoroGradient" x1="0" y1="0" x2="0" y2="1">

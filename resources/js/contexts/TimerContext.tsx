@@ -47,6 +47,7 @@ const TimerContext = createContext<TimerContextType>({
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
     const { playSound } = useSound();
+    const activeSession = (usePage().props as any).activeSession as PomodoroSession | null;
     const [taskId, setTaskId] = useState<number | null>(null);
     const [taskTitle, setTaskTitle] = useState('');
     const [sessionId, setSessionId] = useState<number | null>(null);
@@ -189,15 +190,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (restoredRef.current || status !== 'idle') return;
         restoredRef.current = true;
 
-        const activeSession = (usePage().props as any).activeSession as PomodoroSession | null;
         if (!activeSession || !activeSession.task) return;
 
         const elapsedSeconds = Math.floor(
             (Date.now() - new Date(activeSession.started_at).getTime()) / 1000,
         );
-        const totalSeconds = activeSession.duration_minutes * 60;
+        const total = activeSession.duration_minutes * 60;
 
-        if (elapsedSeconds < totalSeconds) {
+        if (elapsedSeconds < total) {
             startTimer({
                 taskId: activeSession.task_id,
                 taskTitle: activeSession.task.title,
