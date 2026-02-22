@@ -17,7 +17,8 @@ export function formatMinutes(minutes: number): string {
 export function getDeadlineStatus(deadline: string): 'overdue' | 'today' | 'soon' | 'normal' {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const deadlineDate = new Date(deadline + 'T00:00:00');
+    const dateOnly = deadline.split('T')[0];
+    const deadlineDate = new Date(dateOnly + 'T00:00:00');
 
     const diffMs = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
@@ -31,7 +32,8 @@ export function getDeadlineStatus(deadline: string): 'overdue' | 'today' | 'soon
 export function formatDeadline(deadline: string): string {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const deadlineDate = new Date(deadline + 'T00:00:00');
+    const dateOnly = deadline.split('T')[0];
+    const deadlineDate = new Date(dateOnly + 'T00:00:00');
 
     const diffMs = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
