@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useCallback, useRef, useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useSound } from './SoundContext';
-import type { TimerStatus } from '@/types';
+import type { PomodoroSession, TimerStatus } from '@/types';
 
 interface TimerContextType {
     taskId: number | null;
@@ -75,20 +75,25 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             sessionId: number;
             durationMinutes: number;
             type: 'pomodoro' | 'short_break' | 'long_break' | 'custom';
+            initialElapsedSeconds?: number;
         }) => {
             clearTimer();
             const total = params.durationMinutes * 60;
+            const initialRemaining = params.initialElapsedSeconds != null
+                ? Math.max(0, total - params.initialElapsedSeconds)
+                : total;
+
             setTaskId(params.taskId);
             setTaskTitle(params.taskTitle);
             setSessionId(params.sessionId);
             setTotalSeconds(total);
-            setRemainingSeconds(total);
+            setRemainingSeconds(initialRemaining);
             setType(params.type);
             typeRef.current = params.type;
             setStatus('running');
 
             startedAtRef.current = Date.now();
-            pausedRemainingRef.current = total;
+            pausedRemainingRef.current = initialRemaining;
 
             intervalRef.current = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
@@ -177,6 +182,35 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         return () => clearTimer();
     }, [clearTimer]);
+
+    // Restore timer from active session on mount (e.g. after page reload)
+    const restoredRef = useRef(false);
+    useEffect(() => {
+        if (restoredRef.current || status !== 'idle') return;
+        restoredRef.current = true;
+
+        const activeSession = (usePage().props as any).activeSession as PomodoroSession | null;
+        if (!activeSession || !activeSession.task) return;
+
+        const elapsedSeconds = Math.floor(
+            (Date.now() - new Date(activeSession.started_at).getTime()) / 1000,
+        );
+        const totalSeconds = activeSession.duration_minutes * 60;
+
+        if (elapsedSeconds < totalSeconds) {
+            startTimer({
+                taskId: activeSession.task_id,
+                taskTitle: activeSession.task.title,
+                sessionId: activeSession.id,
+                durationMinutes: activeSession.duration_minutes,
+                type: activeSession.type,
+                initialElapsedSeconds: elapsedSeconds,
+            });
+        } else {
+            // Session has expired while page was closed — mark as completed
+            router.patch(route('sessions.complete', activeSession.id), {}, { preserveState: true });
+        }
+    }, []);
 
     return (
         <TimerContext.Provider

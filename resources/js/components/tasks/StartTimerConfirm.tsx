@@ -45,6 +45,15 @@ export default function StartTimerConfirm({ open, onClose, task, settings }: Sta
             duration_minutes: minutes,
         }, {
             preserveState: true,
+            onError: (errors) => {
+                const message = Object.values(errors).flat().join(' ');
+                toast({
+                    title: 'Fehler',
+                    description: message || 'Timer konnte nicht gestartet werden.',
+                    variant: 'destructive',
+                });
+                onClose();
+            },
             onSuccess: (page: any) => {
                 const activeSession = (page as any).props?.activeSession;
                 startTimer({

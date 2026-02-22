@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\PomodoroSession;
 use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -36,6 +37,9 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'settings' => fn () => app(SettingsService::class)->all(),
+            'activeSession' => fn () => PomodoroSession::whereNull('ended_at')
+                ->with('task')
+                ->first(),
             'flash' => fn () => [
                 'motivation' => $request->session()->get('motivation'),
                 'bedtime' => $request->session()->get('bedtime'),

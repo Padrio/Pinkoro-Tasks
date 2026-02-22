@@ -31,9 +31,6 @@ class TaskController extends Controller
                 }], 'duration_minutes')
                 ->get(),
             'categories' => Category::ordered()->get(),
-            'activeSession' => PomodoroSession::whereNull('ended_at')
-                ->with('task')
-                ->first(),
             'settings' => $this->settings->all(),
         ]);
     }
@@ -66,10 +63,22 @@ class TaskController extends Controller
 
     public function toggleComplete(Task $task): RedirectResponse
     {
+        $wasCompleted = $task->is_completed;
+
         $task->update([
-            'is_completed' => !$task->is_completed,
-            'completed_at' => !$task->is_completed ? now() : null,
+            'is_completed' => !$wasCompleted,
+            'completed_at' => !$wasCompleted ? now() : null,
         ]);
+
+        // Cancel any running sessions when marking a task as completed
+        if (!$wasCompleted) {
+            PomodoroSession::where('task_id', $task->id)
+                ->whereNull('ended_at')
+                ->update([
+                    'ended_at' => now(),
+                    'is_completed' => false,
+                ]);
+        }
 
         return back();
     }
