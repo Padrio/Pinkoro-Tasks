@@ -176,13 +176,13 @@ class GamificationService
         $hasEarlyBird = PomodoroSession::query()
             ->completed()
             ->workSessions()
-            ->whereRaw('CAST(strftime(\'%H\', started_at) AS INTEGER) < 7')
+            ->whereTime('started_at', '<', '07:00:00')
             ->exists();
 
         $hasNightOwl = PomodoroSession::query()
             ->completed()
             ->workSessions()
-            ->whereRaw('CAST(strftime(\'%H\', started_at) AS INTEGER) >= 22')
+            ->whereTime('started_at', '>=', '22:00:00')
             ->exists();
 
         foreach ($achievements as $achievement) {
