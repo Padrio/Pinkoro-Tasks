@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\SessionType;
+use App\Models\Category;
 use App\Models\PomodoroSession;
 use App\Models\Task;
 use Illuminate\Support\Carbon;
@@ -45,8 +46,8 @@ class StatisticsService
             ->inPeriod($period)
             ->completed()
             ->selectRaw('COUNT(*) as total_sessions')
-            ->selectRaw('COUNT(CASE WHEN type = ? THEN 1 END) as pomodoro_count', [SessionType::Pomodoro->value])
-            ->selectRaw('SUM(CASE WHEN type = ? THEN duration_minutes ELSE 0 END) as pomodoro_minutes', [SessionType::Pomodoro->value])
+            ->selectRaw('COUNT(CASE WHEN type IN (?, ?) THEN 1 END) as pomodoro_count', [SessionType::Pomodoro->value, SessionType::Custom->value])
+            ->selectRaw('SUM(CASE WHEN type IN (?, ?) THEN duration_minutes ELSE 0 END) as pomodoro_minutes', [SessionType::Pomodoro->value, SessionType::Custom->value])
             ->selectRaw('SUM(duration_minutes) as total_minutes')
             ->first();
 
@@ -65,7 +66,104 @@ class StatisticsService
             'avg_minutes_per_session' => $pomodoroCount > 0
                 ? round((int) ($sessionStats->pomodoro_minutes ?? 0) / $pomodoroCount, 1) : 0,
             'daily' => $this->dailyBreakdown($period),
+            'category_breakdown' => $this->categoryBreakdown($period),
+            'pomodoro_breakdown' => $this->pomodoroBreakdown($period),
         ];
+    }
+
+    private function categoryBreakdown(string $period): array
+    {
+        $categories = Category::ordered()->get();
+        $breakdown = [];
+
+        foreach ($categories as $category) {
+            $breakdown[] = $this->categoryStats($category->id, $category->name, $period);
+        }
+
+        // "Ohne Kategorie" for uncategorized tasks
+        $breakdown[] = $this->categoryStats(null, 'Ohne Kategorie', $period);
+
+        return $breakdown;
+    }
+
+    private function categoryStats(?int $categoryId, string $categoryName, string $period): array
+    {
+        $tasksCompleted = Task::query()
+            ->where('is_completed', true)
+            ->when($categoryId !== null,
+                fn ($q) => $q->where('category_id', $categoryId),
+                fn ($q) => $q->whereNull('category_id'),
+            )
+            ->when($period !== 'all', function ($q) use ($period) {
+                return match ($period) {
+                    'today' => $q->whereDate('completed_at', today()),
+                    '7days' => $q->where('completed_at', '>=', now()->subDays(7)),
+                    '30days' => $q->where('completed_at', '>=', now()->subDays(30)),
+                    default => $q,
+                };
+            })
+            ->count();
+
+        $sessionStats = PomodoroSession::query()
+            ->inPeriod($period)
+            ->completed()
+            ->whereHas('task', function ($q) use ($categoryId) {
+                if ($categoryId !== null) {
+                    $q->where('category_id', $categoryId);
+                } else {
+                    $q->whereNull('category_id');
+                }
+            })
+            ->selectRaw('COUNT(CASE WHEN type IN (?, ?) THEN 1 END) as pomodoro_count', [SessionType::Pomodoro->value, SessionType::Custom->value])
+            ->selectRaw('SUM(CASE WHEN type IN (?, ?) THEN duration_minutes ELSE 0 END) as pomodoro_minutes', [SessionType::Pomodoro->value, SessionType::Custom->value])
+            ->first();
+
+        $estimatedMinutes = (int) Task::query()
+            ->where('is_completed', true)
+            ->when($categoryId !== null,
+                fn ($q) => $q->where('category_id', $categoryId),
+                fn ($q) => $q->whereNull('category_id'),
+            )
+            ->when($period !== 'all', function ($q) use ($period) {
+                return match ($period) {
+                    'today' => $q->whereDate('completed_at', today()),
+                    '7days' => $q->where('completed_at', '>=', now()->subDays(7)),
+                    '30days' => $q->where('completed_at', '>=', now()->subDays(30)),
+                    default => $q,
+                };
+            })
+            ->sum('estimated_minutes');
+
+        $actualMinutes = (int) ($sessionStats->pomodoro_minutes ?? 0);
+
+        return [
+            'category_id' => $categoryId,
+            'category_name' => $categoryName,
+            'tasks_completed' => $tasksCompleted,
+            'pomodoro_count' => (int) ($sessionStats->pomodoro_count ?? 0),
+            'pomodoro_minutes' => $actualMinutes,
+            'estimated_minutes_total' => $estimatedMinutes,
+            'actual_minutes_total' => $actualMinutes,
+            'accuracy_ratio' => $estimatedMinutes > 0
+                ? round($actualMinutes / $estimatedMinutes, 2) : null,
+        ];
+    }
+
+    private function pomodoroBreakdown(string $period): array
+    {
+        return PomodoroSession::query()
+            ->inPeriod($period)
+            ->completed()
+            ->workSessions()
+            ->with('task:id,title')
+            ->orderByDesc('started_at')
+            ->get()
+            ->map(fn ($session) => [
+                'task_title' => $session->task?->title ?? 'Unbekannt',
+                'duration_minutes' => $session->duration_minutes,
+                'started_at' => $session->started_at->format('d.m. H:i'),
+            ])
+            ->all();
     }
 
     private function dailyBreakdown(string $period): array
@@ -87,7 +185,7 @@ class StatisticsService
             $tasksCompleted = Task::whereDate('completed_at', $dateStr)->count();
             $pomodoroMinutes = (int) PomodoroSession::query()
                 ->completed()
-                ->pomodoros()
+                ->workSessions()
                 ->whereDate('started_at', $dateStr)
                 ->sum('duration_minutes');
 

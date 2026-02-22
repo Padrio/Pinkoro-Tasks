@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -33,6 +34,12 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'settings' => fn () => app(SettingsService::class)->all(),
+            'flash' => fn () => [
+                'motivation' => $request->session()->get('motivation'),
+                'bedtime' => $request->session()->get('bedtime'),
+                'new_achievements' => $request->session()->get('new_achievements'),
             ],
         ];
     }

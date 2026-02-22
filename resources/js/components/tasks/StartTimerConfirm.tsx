@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
+import { toast } from '@/hooks/use-toast';
 import { useTimer } from '@/contexts/TimerContext';
 import {
     AlertDialog,
@@ -23,7 +24,7 @@ interface StartTimerConfirmProps {
 }
 
 export default function StartTimerConfirm({ open, onClose, task, settings }: StartTimerConfirmProps) {
-    const { startTimer } = useTimer();
+    const { startTimer, pomodoroInSet } = useTimer();
     const [selectedMinutes, setSelectedMinutes] = useState(settings.pomodoro_duration);
     const [selectedType, setSelectedType] = useState<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
     const [customMinutes, setCustomMinutes] = useState('');
@@ -53,6 +54,23 @@ export default function StartTimerConfirm({ open, onClose, task, settings }: Sta
                     durationMinutes: minutes,
                     type,
                 });
+
+                const flash = (page as any).props?.flash;
+                const bedtime = flash?.bedtime;
+                const motivation = flash?.motivation;
+
+                if (bedtime) {
+                    toast({
+                        title: 'Feierabend? 🌙',
+                        description: bedtime,
+                    });
+                } else if (motivation) {
+                    toast({
+                        title: motivation.type === 'praise' ? 'Früher Vogel! 🐦' : 'Aufgewacht? ⏰',
+                        description: motivation.message,
+                    });
+                }
+
                 onClose();
             },
         });
@@ -68,6 +86,11 @@ export default function StartTimerConfirm({ open, onClose, task, settings }: Sta
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-gray-600">
                         Starte einen Timer für &ldquo;{task.title}&rdquo;
+                        {pomodoroInSet > 0 && (
+                            <span className="block text-xs text-gray-400 mt-1">
+                                Pomodoro {pomodoroInSet}/{settings.pomodoros_per_set} im aktuellen Set abgeschlossen
+                            </span>
+                        )}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-3 py-2">

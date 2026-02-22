@@ -1,16 +1,26 @@
 import { ReactNode } from 'react';
+import { usePage } from '@inertiajs/react';
 import Navigation from './Navigation';
 import { TimerProvider } from '@/contexts/TimerContext';
 import { SoundProvider } from '@/contexts/SoundContext';
 import { Toaster } from '@/components/ui/toaster';
+import type { Settings } from '@/types';
 
 interface AppLayoutProps {
     children: ReactNode;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
+    const { settings } = usePage<{ settings: Settings }>().props;
+
     return (
-        <SoundProvider>
+        <SoundProvider
+            initialEnabled={settings.sound_enabled}
+            initialVolume={settings.sound_volume}
+            initialPomodoroEnd={settings.sound_pomodoro_end}
+            initialBreakEnd={settings.sound_break_end}
+            initialTaskComplete={settings.sound_task_complete}
+        >
             <TimerProvider>
                 <div className="gradient-bg min-h-screen">
                     <Navigation />

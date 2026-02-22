@@ -13,7 +13,7 @@ export default function Navigation() {
                     <div className="flex items-center gap-1">
                         <div className="flex items-center gap-2 mr-6">
                             <Timer className="w-6 h-6 text-pink-500" />
-                            <span className="text-lg font-bold text-gray-800">Pomodoro</span>
+                            <span className="text-lg font-bold text-gray-800">Pinkoro</span>
                         </div>
                         <NavLink href="/" active={url === '/'}>
                             <span className="flex items-center gap-1.5">

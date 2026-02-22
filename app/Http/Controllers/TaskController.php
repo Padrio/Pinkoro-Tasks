@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ReorderTasksRequest;
 use App\Http\Requests\TaskRequest;
+use App\Models\Category;
 use App\Models\PomodoroSession;
 use App\Models\Task;
 use App\Services\SettingsService;
@@ -23,9 +24,13 @@ class TaskController extends Controller
         return Inertia::render('Tasks', [
             'tasks' => Task::ordered()
                 ->withCount(['pomodoroSessions as pomodoro_count' => function ($q) {
-                    $q->where('type', 'pomodoro')->where('is_completed', true);
+                    $q->whereIn('type', ['pomodoro', 'custom'])->where('is_completed', true);
                 }])
+                ->withSum(['pomodoroSessions as actual_minutes' => function ($q) {
+                    $q->whereIn('type', ['pomodoro', 'custom'])->where('is_completed', true);
+                }], 'duration_minutes')
                 ->get(),
+            'categories' => Category::ordered()->get(),
             'activeSession' => PomodoroSession::whereNull('ended_at')
                 ->with('task')
                 ->first(),
@@ -72,8 +77,11 @@ class TaskController extends Controller
     public function reorder(ReorderTasksRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {
-            foreach ($request->order as $index => $id) {
-                Task::where('id', $id)->update(['sort_order' => $index]);
+            foreach ($request->order as $index => $item) {
+                Task::where('id', $item['id'])->update([
+                    'sort_order' => $index,
+                    'category_id' => $item['category_id'] ?? null,
+                ]);
             }
         });
 

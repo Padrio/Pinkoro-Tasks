@@ -8,7 +8,7 @@ interface CircularProgressProps {
 
 export default function CircularProgress({
     progress,
-    size = 240,
+    size = 200,
     strokeWidth = 8,
 }: CircularProgressProps) {
     const radius = (size - strokeWidth) / 2;
@@ -16,7 +16,7 @@ export default function CircularProgress({
     const offset = circumference * (1 - progress);
 
     return (
-        <svg width={size} height={size} className="transform -rotate-90">
+        <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-auto transform -rotate-90" style={{ maxWidth: size }}>
             <defs>
                 <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#F9A8D4" />

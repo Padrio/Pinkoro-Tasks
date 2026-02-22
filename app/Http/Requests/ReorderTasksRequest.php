@@ -15,7 +15,8 @@ class ReorderTasksRequest extends FormRequest
     {
         return [
             'order' => 'required|array',
-            'order.*' => 'integer|exists:tasks,id',
+            'order.*.id' => 'required|integer|exists:tasks,id',
+            'order.*.category_id' => 'nullable|integer|exists:categories,id',
         ];
     }
 }

@@ -2,18 +2,43 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Volume2, VolumeX, Play } from 'lucide-react';
 import { useSound } from '@/contexts/SoundContext';
+import { SOUND_LIBRARY } from '@/lib/chime';
+import type { SoundId } from '@/types';
 import SettingsSection from './SettingsSection';
 
 interface SoundSettingsProps {
     enabled: boolean;
     volume: number;
-    onChange: (key: string, value: boolean | number) => void;
+    soundPomodoroEnd: SoundId;
+    soundBreakEnd: SoundId;
+    soundTaskComplete: SoundId;
+    onChange: (key: string, value: boolean | number | string) => void;
 }
 
-export default function SoundSettings({ enabled, volume, onChange }: SoundSettingsProps) {
-    const { playSound } = useSound();
+const EVENT_ROWS: { key: string; label: string }[] = [
+    { key: 'sound_pomodoro_end', label: 'Pomodoro beendet' },
+    { key: 'sound_break_end', label: 'Pause beendet' },
+    { key: 'sound_task_complete', label: 'Aufgabe erledigt' },
+];
+
+export default function SoundSettings({
+    enabled,
+    volume,
+    soundPomodoroEnd,
+    soundBreakEnd,
+    soundTaskComplete,
+    onChange,
+}: SoundSettingsProps) {
+    const { previewSound } = useSound();
+
+    const valueMap: Record<string, SoundId> = {
+        sound_pomodoro_end: soundPomodoroEnd,
+        sound_break_end: soundBreakEnd,
+        sound_task_complete: soundTaskComplete,
+    };
 
     return (
         <SettingsSection
@@ -52,14 +77,38 @@ export default function SoundSettings({ enabled, volume, onChange }: SoundSettin
                                 className="[&_[role=slider]]:bg-pink-400 [&_[role=slider]]:border-pink-400"
                             />
                         </div>
-                        <Button
-                            onClick={() => playSound('timer-complete')}
-                            variant="outline"
-                            className="rounded-xl border-pink-200 hover:bg-pink-50"
-                        >
-                            <Volume2 className="w-4 h-4 mr-2" />
-                            Test-Sound abspielen
-                        </Button>
+
+                        <div className="space-y-4 pt-2">
+                            {EVENT_ROWS.map(({ key, label }) => (
+                                <div key={key} className="flex items-center gap-3">
+                                    <Label className="w-36 shrink-0 text-sm">{label}</Label>
+                                    <Select
+                                        value={valueMap[key]}
+                                        onValueChange={(v) => onChange(key, v)}
+                                    >
+                                        <SelectTrigger className="flex-1 rounded-xl border-pink-200">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {SOUND_LIBRARY.map((sound) => (
+                                                <SelectItem key={sound.id} value={sound.id}>
+                                                    {sound.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        className="shrink-0 rounded-xl border-pink-200 hover:bg-pink-50"
+                                        onClick={() => previewSound(valueMap[key])}
+                                    >
+                                        <Play className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
                     </>
                 )}
             </div>

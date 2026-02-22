@@ -6,7 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import AppLayout from '@/components/layout/AppLayout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Pomodoro';
+const appName = import.meta.env.VITE_APP_NAME || 'Pinkoro';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

@@ -16,6 +16,9 @@ class TaskRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'deadline' => 'nullable|date',
+            'estimated_minutes' => 'nullable|integer|min:1|max:9999',
         ];
     }
 }

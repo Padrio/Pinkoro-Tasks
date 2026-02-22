@@ -1,12 +1,46 @@
 import { useTimer } from '@/contexts/TimerContext';
+import { usePage } from '@inertiajs/react';
 import { formatTime } from '@/lib/formatTime';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import type { TimerDisplayMode } from '@/types';
+
+const MODES_WITHOUT_TIME: TimerDisplayMode[] = ['ring_only', 'ring_percent'];
 
 export default function TimerMiniDisplay() {
     const { status, remainingSeconds, taskTitle, type } = useTimer();
+    const { url } = usePage();
+
+    const [displayMode, setDisplayMode] = useState<TimerDisplayMode>('ring_time');
+
+    useEffect(() => {
+        const mode = localStorage.getItem('timer_display_mode') as TimerDisplayMode | null;
+        if (mode) setDisplayMode(mode);
+
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'timer_display_mode' && e.newValue) {
+                setDisplayMode(e.newValue as TimerDisplayMode);
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, []);
+
+    // Also poll localStorage for same-tab changes (storage event only fires cross-tab)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const mode = localStorage.getItem('timer_display_mode') as TimerDisplayMode | null;
+            if (mode && mode !== displayMode) setDisplayMode(mode);
+        }, 500);
+        return () => clearInterval(interval);
+    }, [displayMode]);
 
     if (status === 'idle') return null;
+
+    // On Tasks page, hide mini timer when display mode doesn't show time
+    const isTasksPage = url.startsWith('/tasks');
+    if (isTasksPage && MODES_WITHOUT_TIME.includes(displayMode)) return null;
 
     const typeColors: Record<string, string> = {
         pomodoro: 'bg-pink-100 text-pink-700 border-pink-200',

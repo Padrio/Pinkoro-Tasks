@@ -15,6 +15,11 @@ class SettingsService
             'long_break_duration' => 15,
             'sound_enabled' => true,
             'sound_volume' => 80,
+            'timer_display_mode' => 'ring_time',
+            'pomodoros_per_set' => 4,
+            'sound_pomodoro_end' => 'glockenspiel',
+            'sound_break_end' => 'abschluss',
+            'sound_task_complete' => 'doppelton',
         ];
     }
 

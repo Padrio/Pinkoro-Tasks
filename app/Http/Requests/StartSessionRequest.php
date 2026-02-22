@@ -16,7 +16,7 @@ class StartSessionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'task_id' => 'required|exists:tasks,id',
+            'task_id' => 'nullable|exists:tasks,id',
             'type' => ['required', Rule::enum(SessionType::class)],
             'duration_minutes' => 'required|integer|min:1|max:120',
         ];

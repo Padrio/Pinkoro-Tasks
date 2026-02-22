@@ -1,59 +1,157 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Pinkoro
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A beautiful single-user Pomodoro timer app with task management, statistics, and gamification — wrapped in a glassmorphism UI with a pastel pink aesthetic.
 
-## About Laravel
+Built with Laravel 12, React 18, TypeScript, and Inertia.js.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Pomodoro Timer
+- Configurable durations for Pomodoro, short break, long break, and custom sessions
+- Persistent timer that survives page navigation
+- Multiple visual display modes (ring, bar, liquid, etc.)
+- Sound notifications with 9 synthesized chimes (Web Audio API, no external files)
+- Pomodoro set tracking (configurable sessions per set)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Task Management
+- Create, edit, and delete tasks with optional deadlines and time estimates
+- Organize tasks into categories
+- Drag-and-drop reordering (tasks and categories)
+- Deadline tracking with overdue/due-today/due-soon indicators
+- Start Pomodoro sessions directly from a task
 
-## Learning Laravel
+### Dashboard & Statistics
+- Daily breakdown of completed tasks and focus minutes
+- Category breakdown with accuracy tracking (estimated vs. actual time)
+- Session-by-session history (last 25 Pomodoros)
+- Filterable by time period (today, 7 days, 30 days)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Gamification
+- 12 achievements across bronze, silver, and gold tiers
+- Level system (8 levels based on total focus minutes)
+- Streak tracking (current and longest)
+- Productivity score (0–100)
+- Time-of-day motivational messages
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Settings
+- Timer duration customization
+- Sound selection and volume per event (Pomodoro end, break end, task complete)
+- Timer display mode selection
+- Pomodoros per set
 
-## Laravel Sponsors
+## Tech Stack
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| PHP | ^8.2 | Runtime |
+| Laravel | 12 | Framework |
+| SQLite | — | Database |
+| Inertia.js | 2 | Server-side adapter |
+| Ziggy | 2 | Laravel route sharing |
 
-### Premium Partners
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 18 | UI library |
+| TypeScript | 5 | Type safety |
+| Inertia.js React | 2 | Client-side adapter |
+| Tailwind CSS | 4 | Utility-first styling |
+| shadcn/ui (Radix) | — | Component library (new-york style) |
+| Framer Motion | 12 | Animations |
+| Recharts | 3 | Charts & data visualization |
+| dnd-kit | 6/10 | Drag-and-drop |
+| Lucide React | — | Icons |
+| Vite | 7 | Build tool |
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Prerequisites
 
-## Contributing
+- **PHP** >= 8.2 with SQLite extension
+- **Composer** >= 2
+- **Node.js** >= 18 with npm
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Setup
 
-## Code of Conduct
+```bash
+# Clone the repository
+git clone <repo-url> pinkoro
+cd pinkoro
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Run the setup script (installs deps, creates .env, generates key, migrates DB, builds frontend)
+composer setup
 
-## Security Vulnerabilities
+# Seed achievements (required for gamification)
+php artisan db:seed --class=AchievementSeeder
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+This single command handles everything:
+1. Installs PHP dependencies (`composer install`)
+2. Copies `.env.example` to `.env` (if not present)
+3. Generates the application key
+4. Runs database migrations (creates the SQLite database)
+5. Installs Node.js dependencies (`npm install`)
+6. Builds the frontend (`npm run build`)
+
+## Development
+
+```bash
+composer dev
+```
+
+This starts all services concurrently:
+- **Laravel dev server** — `http://localhost:8000`
+- **Vite dev server** — hot module replacement
+- **Queue worker** — background jobs
+- **Pail** — real-time log viewer
+
+## Project Structure
+
+```
+app/
+├── Enums/              # SessionType enum (pomodoro, short_break, long_break, custom)
+├── Http/
+│   ├── Controllers/    # Dashboard, Task, Category, PomodoroSession, Settings
+│   └── Requests/       # Form request validation classes
+├── Models/             # Task, PomodoroSession, Category, Achievement, Setting, ...
+└── Services/           # SettingsService, StatisticsService, GamificationService
+
+resources/js/
+├── Pages/              # Dashboard.tsx, Tasks.tsx, Settings.tsx
+├── components/
+│   ├── layout/         # AppLayout, Navigation, NavLink, TimerMiniDisplay
+│   ├── timer/          # TimerWidget, CircularProgress, DigitalDisplay, ...
+│   ├── dashboard/      # StatsGrid, StatCard, Charts, StreakWidget, LevelWidget, ...
+│   ├── tasks/          # TaskList, TaskItem, TaskForm, CategorySection, ...
+│   ├── settings/       # TimerSettings, SoundSettings, SettingsSection
+│   └── ui/             # shadcn/ui primitives (Button, Dialog, Select, ...)
+├── contexts/           # TimerContext, SoundContext
+├── lib/                # Chime audio synthesis, time formatting utilities
+└── types/              # Global TypeScript interfaces
+
+database/
+├── migrations/         # 13 migration files
+└── seeders/            # AchievementSeeder, SettingsSeeder
+```
+
+## Database Schema
+
+| Table | Purpose |
+|---|---|
+| `tasks` | Task title, description, deadline, estimated minutes, completion state, category, sort order |
+| `categories` | Named groups for organizing tasks |
+| `pomodoro_sessions` | Timer sessions linked to tasks — type, duration, start/end timestamps, completion |
+| `settings` | Key-value JSON store for all app configuration |
+| `achievements` | Achievement definitions (key, name, icon, tier, threshold) |
+| `user_achievements` | Tracks which achievements have been unlocked |
+
+## Testing
+
+```bash
+composer test
+```
+
+Uses an in-memory SQLite database for fast, isolated test runs.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Services\GamificationService;
 use App\Services\SettingsService;
 use App\Services\StatisticsService;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class DashboardController extends Controller
     public function __construct(
         private StatisticsService $statistics,
         private SettingsService $settings,
+        private GamificationService $gamification,
     ) {}
 
     public function index(Request $request): Response
@@ -28,7 +30,16 @@ class DashboardController extends Controller
                 ->latest()
                 ->limit(5)
                 ->get(),
+            'urgentTasks' => [
+                'overdue' => Task::overdue()->ordered()->get(),
+                'due_today' => Task::dueToday()->ordered()->get(),
+                'due_soon' => Task::dueSoon(3)->ordered()->get(),
+            ],
             'settings' => $this->settings->all(),
+            'streak' => $this->gamification->getStreak(),
+            'level' => $this->gamification->getLevel(),
+            'score' => $this->gamification->getProductivityScore($period),
+            'achievements' => $this->gamification->getUnlockedAchievements(),
         ]);
     }
 }

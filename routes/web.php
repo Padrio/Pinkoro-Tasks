@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\PomodoroSessionController;
@@ -16,6 +17,12 @@ Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.upda
 Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 Route::patch('/tasks/{task}/toggle', [TaskController::class, 'toggleComplete'])->name('tasks.toggle');
 Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
+
+// Categories
+Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
 
 // Pomodoro Sessions
 Route::post('/sessions', [PomodoroSessionController::class, 'start'])->name('sessions.start');

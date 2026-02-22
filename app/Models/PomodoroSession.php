@@ -43,6 +43,14 @@ class PomodoroSession extends Model
         return $query->where('type', SessionType::Pomodoro);
     }
 
+    /**
+     * Work sessions: pomodoros + custom timers (excludes breaks).
+     */
+    public function scopeWorkSessions(Builder $query): Builder
+    {
+        return $query->whereIn('type', [SessionType::Pomodoro, SessionType::Custom]);
+    }
+
     public function scopeInPeriod(Builder $query, string $period): Builder
     {
         return match ($period) {

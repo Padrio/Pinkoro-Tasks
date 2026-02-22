@@ -17,7 +17,7 @@ export default function Settings({ settings, defaults }: SettingsProps) {
     const [values, setValues] = useState(settings);
     const [isDirty, setIsDirty] = useState(false);
 
-    const handleChange = useCallback((key: string, value: number | boolean) => {
+    const handleChange = useCallback((key: string, value: number | boolean | string) => {
         setValues((prev) => ({ ...prev, [key]: value }));
         setIsDirty(true);
     }, []);
@@ -64,12 +64,17 @@ export default function Settings({ settings, defaults }: SettingsProps) {
                     pomodoroMinutes={values.pomodoro_duration}
                     shortBreakMinutes={values.short_break_duration}
                     longBreakMinutes={values.long_break_duration}
+                    pomodorosPerSet={values.pomodoros_per_set}
+                    timerDisplayMode={values.timer_display_mode}
                     onChange={handleChange}
                 />
 
                 <SoundSettings
                     enabled={values.sound_enabled}
                     volume={values.sound_volume}
+                    soundPomodoroEnd={values.sound_pomodoro_end}
+                    soundBreakEnd={values.sound_break_end}
+                    soundTaskComplete={values.sound_task_complete}
                     onChange={handleChange}
                 />
 

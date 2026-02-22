@@ -11,6 +11,7 @@ interface TimerContextType {
     remainingSeconds: number;
     status: TimerStatus;
     type: 'pomodoro' | 'short_break' | 'long_break' | 'custom';
+    pomodoroInSet: number;
     startTimer: (params: {
         taskId: number;
         taskTitle: string;
@@ -21,7 +22,9 @@ interface TimerContextType {
     pauseTimer: () => void;
     resumeTimer: () => void;
     resetTimer: () => void;
-    completeTimer: () => void;
+    completeTimer: (options?: { skipServerComplete?: boolean }) => void;
+    incrementPomodoro: () => void;
+    resetPomodoroSet: () => void;
 }
 
 const TimerContext = createContext<TimerContextType>({
@@ -32,11 +35,14 @@ const TimerContext = createContext<TimerContextType>({
     remainingSeconds: 0,
     status: 'idle',
     type: 'pomodoro',
+    pomodoroInSet: 0,
     startTimer: () => {},
     pauseTimer: () => {},
     resumeTimer: () => {},
     resetTimer: () => {},
     completeTimer: () => {},
+    incrementPomodoro: () => {},
+    resetPomodoroSet: () => {},
 });
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
@@ -48,10 +54,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const [status, setStatus] = useState<TimerStatus>('idle');
     const [type, setType] = useState<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
+    const [pomodoroInSet, setPomodoroInSet] = useState(0);
 
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startedAtRef = useRef<number>(0);
     const pausedRemainingRef = useRef<number>(0);
+    const typeRef = useRef<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
 
     const clearTimer = useCallback(() => {
         if (intervalRef.current) {
@@ -59,18 +67,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             intervalRef.current = null;
         }
     }, []);
-
-    const tick = useCallback(() => {
-        const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-        const remaining = Math.max(0, pausedRemainingRef.current - elapsed);
-        setRemainingSeconds(remaining);
-
-        if (remaining <= 0) {
-            clearTimer();
-            setStatus('completed');
-            playSound('timer-complete');
-        }
-    }, [clearTimer, playSound]);
 
     const startTimer = useCallback(
         (params: {
@@ -88,6 +84,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             setTotalSeconds(total);
             setRemainingSeconds(total);
             setType(params.type);
+            typeRef.current = params.type;
             setStatus('running');
 
             startedAtRef.current = Date.now();
@@ -101,7 +98,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 if (rem <= 0) {
                     clearTimer();
                     setStatus('completed');
-                    playSound('timer-complete');
+                    playSound(
+                        typeRef.current === 'pomodoro' || typeRef.current === 'custom'
+                            ? 'pomodoro-end'
+                            : 'break-end',
+                    );
                 }
             }, 250);
         },
@@ -128,7 +129,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             if (rem <= 0) {
                 clearTimer();
                 setStatus('completed');
-                playSound('timer-complete');
+                playSound(
+                    typeRef.current === 'pomodoro' || typeRef.current === 'custom'
+                        ? 'pomodoro-end'
+                        : 'break-end',
+                );
             }
         }, 250);
     }, [status, clearTimer, playSound]);
@@ -147,9 +152,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         setType('pomodoro');
     }, [clearTimer, sessionId]);
 
-    const completeTimer = useCallback(() => {
+    const completeTimer = useCallback((options?: { skipServerComplete?: boolean }) => {
         clearTimer();
-        if (sessionId) {
+        if (sessionId && !options?.skipServerComplete) {
             router.patch(route('sessions.complete', sessionId), {}, { preserveState: true });
         }
         setStatus('idle');
@@ -160,6 +165,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         setRemainingSeconds(0);
         setType('pomodoro');
     }, [clearTimer, sessionId]);
+
+    const incrementPomodoro = useCallback(() => {
+        setPomodoroInSet(prev => prev + 1);
+    }, []);
+
+    const resetPomodoroSet = useCallback(() => {
+        setPomodoroInSet(0);
+    }, []);
 
     useEffect(() => {
         return () => clearTimer();
@@ -175,11 +188,14 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 remainingSeconds,
                 status,
                 type,
+                pomodoroInSet,
                 startTimer,
                 pauseTimer,
                 resumeTimer,
                 resetTimer,
                 completeTimer,
+                incrementPomodoro,
+                resetPomodoroSet,
             }}
         >
             {children}
