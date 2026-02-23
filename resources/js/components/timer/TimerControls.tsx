@@ -1,11 +1,22 @@
+import { router } from '@inertiajs/react';
 import { useTimer } from '@/contexts/TimerContext';
+import { useSound } from '@/contexts/SoundContext';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 export default function TimerControls() {
-    const { status, pauseTimer, resumeTimer, resetTimer } = useTimer();
+    const { status, taskId, totalSeconds, remainingSeconds, pauseTimer, resumeTimer, resetTimer, completeTimer } = useTimer();
+    const { playSound } = useSound();
 
     if (status === 'idle' || status === 'completed') return null;
+
+    const handleComplete = () => {
+        if (!taskId) return;
+        const elapsedMinutes = Math.max(1, Math.round((totalSeconds - remainingSeconds) / 60));
+        playSound('task-complete');
+        completeTimer({ skipServerComplete: true });
+        router.patch(route('tasks.toggle', taskId), { elapsed_minutes: elapsedMinutes }, { preserveState: true });
+    };
 
     return (
         <div className="flex flex-wrap items-center justify-center gap-3">
@@ -28,6 +39,14 @@ export default function TimerControls() {
                     Fortsetzen
                 </Button>
             )}
+            <Button
+                onClick={handleComplete}
+                size="default"
+                className="bg-green-400 hover:bg-green-500 text-white rounded-xl shadow-lg shadow-green-200/50"
+            >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Erledigt
+            </Button>
             <Button
                 onClick={resetTimer}
                 variant="outline"

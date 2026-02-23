@@ -15,6 +15,7 @@ import type { Task, Settings } from '@/types';
 import TaskForm from './TaskForm';
 import StartTimerConfirm from './StartTimerConfirm';
 import TimerRunningAlert from './TimerRunningAlert';
+import ManualTimeDialog from './ManualTimeDialog';
 
 interface TaskItemProps {
     task: Task;
@@ -31,10 +32,12 @@ const deadlineColors: Record<string, string> = {
 
 export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskItemProps) {
     const { playSound } = useSound();
-    const { status: timerStatus, taskTitle: runningTaskTitle } = useTimer();
+    const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle, totalSeconds, remainingSeconds, completeTimer } = useTimer();
     const [showEdit, setShowEdit] = useState(false);
     const [showTimerConfirm, setShowTimerConfirm] = useState(false);
     const [showTimerRunning, setShowTimerRunning] = useState(false);
+    const [showManualTime, setShowManualTime] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const {
         attributes,
@@ -50,10 +53,27 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
         transition,
     };
 
+    const timerRunningForThisTask = (timerStatus === 'running' || timerStatus === 'paused') && timerTaskId === task.id;
+
     const handleToggle = () => {
         if (!task.is_completed) {
             playSound('task-complete');
+
+            // Timer is running for this task → stop it, transfer actual elapsed time
+            if (timerRunningForThisTask) {
+                const elapsedMinutes = Math.max(1, Math.round((totalSeconds - remainingSeconds) / 60));
+                completeTimer({ skipServerComplete: true });
+                router.patch(route('tasks.toggle', task.id), { elapsed_minutes: elapsedMinutes }, { preserveState: true });
+                return;
+            }
+
+            // No timer, no logged time, but has estimate → ask for manual time
+            if (actualMinutes === 0 && hasEstimate) {
+                setShowManualTime(true);
+                return;
+            }
         }
+
         router.patch(route('tasks.toggle', task.id), {}, { preserveState: true });
     };
 
@@ -77,6 +97,15 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
         : 0;
     const estimateReached = hasEstimate && actualMinutes >= task.estimated_minutes!;
     const overEstimate = hasEstimate && actualMinutes > task.estimated_minutes! * 1.2;
+    const fasterThanEstimate = task.is_completed && hasEstimate && actualMinutes < task.estimated_minutes!;
+
+    const timeBadgeColor = overEstimate
+        ? 'bg-orange-100 text-orange-700'
+        : estimateReached
+            ? 'bg-green-100 text-green-700'
+            : fasterThanEstimate
+                ? 'bg-teal-100 text-teal-700'
+                : 'bg-pink-100 text-pink-700';
 
     return (
         <>
@@ -108,14 +137,17 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
                         className="border-pink-300 data-[state=checked]:bg-pink-400 data-[state=checked]:border-pink-400"
                     />
 
-                    <div className="flex-1 min-w-0">
-                        <p className={`font-medium text-gray-800 truncate ${
-                            task.is_completed ? 'line-through text-gray-400' : ''
-                        }`}>
+                    <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setIsExpanded(prev => !prev)}
+                    >
+                        <p className={`font-medium text-gray-800 ${
+                            isExpanded ? 'break-words' : 'truncate'
+                        } ${task.is_completed ? 'line-through text-gray-400' : ''}`}>
                             {task.title}
                         </p>
                         {task.description && (
-                            <p className="text-sm text-gray-500 truncate">{task.description}</p>
+                            <p className={`text-sm text-gray-500 ${isExpanded ? 'break-words' : 'truncate'}`}>{task.description}</p>
                         )}
                     </div>
 
@@ -127,7 +159,7 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
                     )}
 
                     {(actualMinutes > 0 || hasEstimate) && (
-                        <Badge variant="secondary" className={`border-0 ${overEstimate ? 'bg-orange-100 text-orange-700' : estimateReached ? 'bg-green-100 text-green-700' : 'bg-pink-100 text-pink-700'}`}>
+                        <Badge variant="secondary" className={`border-0 ${timeBadgeColor}`}>
                             <Timer className="w-3 h-3 mr-1" />
                             {hasEstimate ? `${actualMinutes}/${task.estimated_minutes} Min` : `${actualMinutes} Min`}
                         </Badge>
@@ -184,6 +216,11 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
                 open={showTimerRunning}
                 onClose={() => setShowTimerRunning(false)}
                 runningTaskTitle={runningTaskTitle}
+            />
+            <ManualTimeDialog
+                open={showManualTime}
+                onClose={() => setShowManualTime(false)}
+                task={task}
             />
         </>
     );

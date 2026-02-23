@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronRight, Pencil, Trash2, Check, X, Plus } from 'lucide-react';
+import { ChevronRight, GripVertical, Pencil, Trash2, Check, X, Plus } from 'lucide-react';
 import TaskItem from './TaskItem';
 import TaskForm from './TaskForm';
 import type { Task, Category, Settings } from '@/types';
@@ -17,9 +18,10 @@ interface CategorySectionProps {
     categories: Category[];
     tasks: Task[];
     settings: Settings;
+    sortableId?: string;
 }
 
-export default function CategorySection({ category, categories, tasks, settings }: CategorySectionProps) {
+export default function CategorySection({ category, categories, tasks, settings, sortableId }: CategorySectionProps) {
     const storageKey = `category-collapsed-${category?.id ?? 'uncategorized'}`;
     const [isOpen, setIsOpen] = useState(() => {
         const stored = localStorage.getItem(storageKey);
@@ -31,6 +33,20 @@ export default function CategorySection({ category, categories, tasks, settings 
 
     const droppableId = `category-${category?.id ?? 'null'}`;
     const { setNodeRef } = useDroppable({ id: droppableId });
+
+    const {
+        attributes: sortableAttributes,
+        listeners: sortableListeners,
+        setNodeRef: setSortableNodeRef,
+        transform: sortableTransform,
+        transition: sortableTransition,
+        isDragging: isSortableDragging,
+    } = useSortable({ id: sortableId ?? '', disabled: !sortableId });
+
+    const sortableStyle = sortableId ? {
+        transform: CSS.Transform.toString(sortableTransform),
+        transition: sortableTransition,
+    } : undefined;
 
     useEffect(() => {
         localStorage.setItem(storageKey, String(isOpen));
@@ -51,8 +67,21 @@ export default function CategorySection({ category, categories, tasks, settings 
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <div className="glass p-3 group">
+            <div
+                ref={sortableId ? setSortableNodeRef : undefined}
+                style={sortableStyle}
+                className={`glass p-3 group ${isSortableDragging ? 'opacity-50 z-50' : ''}`}
+            >
                 <div className="flex items-center gap-2">
+                    {sortableId && (
+                        <button
+                            {...sortableAttributes}
+                            {...sortableListeners}
+                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
+                        >
+                            <GripVertical className="w-4 h-4" />
+                        </button>
+                    )}
                     <CollapsibleTrigger asChild>
                         <button className="flex items-center gap-2 flex-1 min-w-0 text-left">
                             <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />

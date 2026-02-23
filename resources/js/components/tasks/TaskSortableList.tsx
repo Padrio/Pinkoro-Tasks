@@ -11,6 +11,8 @@ import {
     DragOverEvent,
 } from '@dnd-kit/core';
 import {
+    SortableContext,
+    verticalListSortingStrategy,
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { AnimatePresence } from 'framer-motion';
@@ -28,6 +30,7 @@ interface TaskSortableListProps {
 
 export default function TaskSortableList({ tasks, categories, settings, sortMode = 'manual' }: TaskSortableListProps) {
     const [items, setItems] = useState(tasks);
+    const [categoryOrder, setCategoryOrder] = useState(categories.map(c => c.id));
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -40,6 +43,21 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
     if (taskIds !== itemIds) {
         setItems(tasks);
     }
+
+    // Sync category order with server data
+    const serverCatIds = categories.map(c => c.id).join(',');
+    const localCatIds = categoryOrder.join(',');
+    if (serverCatIds !== localCatIds) {
+        setCategoryOrder(categories.map(c => c.id));
+    }
+
+    const orderedCategories = useMemo(() => {
+        return categoryOrder
+            .map(id => categories.find(c => c.id === id))
+            .filter((c): c is Category => c !== undefined);
+    }, [categoryOrder, categories]);
+
+    const categorySortableIds = useMemo(() => categoryOrder.map(id => `cat-${id}`), [categoryOrder]);
 
     // Separate active and completed tasks
     const activeTasks = useMemo(() => items.filter(t => !t.is_completed), [items]);
@@ -76,6 +94,9 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
         const { active, over } = event;
         if (!over) return;
 
+        // Ignore category drags in handleDragOver
+        if (String(active.id).startsWith('cat-')) return;
+
         const activeId = active.id as number;
         const overId = over.id;
 
@@ -100,6 +121,27 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over) return;
+
+        // Handle category reorder
+        if (String(active.id).startsWith('cat-') && String(over.id).startsWith('cat-')) {
+            const activeIdx = categoryOrder.indexOf(Number(String(active.id).replace('cat-', '')));
+            const overIdx = categoryOrder.indexOf(Number(String(over.id).replace('cat-', '')));
+
+            if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
+                const newOrder = [...categoryOrder];
+                const [moved] = newOrder.splice(activeIdx, 1);
+                newOrder.splice(overIdx, 0, moved);
+                setCategoryOrder(newOrder);
+
+                router.post(route('categories.reorder'), {
+                    order: newOrder,
+                }, { preserveState: true });
+            }
+            return;
+        }
+
+        // Ignore if a category was dropped on a non-category
+        if (String(active.id).startsWith('cat-')) return;
 
         const activeId = active.id as number;
         const overId = over.id;
@@ -189,15 +231,18 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
             onDragEnd={handleDragEnd}
         >
             <div className="space-y-4">
-                {categories.map((category) => (
-                    <CategorySection
-                        key={category.id}
-                        category={category}
-                        categories={categories}
-                        tasks={groupedTasks[String(category.id)] ?? []}
-                        settings={settings}
-                    />
-                ))}
+                <SortableContext items={categorySortableIds} strategy={verticalListSortingStrategy}>
+                    {orderedCategories.map((category) => (
+                        <CategorySection
+                            key={category.id}
+                            category={category}
+                            categories={categories}
+                            tasks={groupedTasks[String(category.id)] ?? []}
+                            settings={settings}
+                            sortableId={`cat-${category.id}`}
+                        />
+                    ))}
+                </SortableContext>
                 <CategorySection
                     category={null}
                     categories={categories}

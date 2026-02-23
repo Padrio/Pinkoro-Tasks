@@ -46,6 +46,16 @@ export default function TaskForm({ open, onClose, task, categories = [], default
         estimated_minutes: data.estimated_minutes ? Number(data.estimated_minutes) : null,
     }));
 
+    const handleDateKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        const key = e.key.toLowerCase();
+        if (key === 'h' || key === 'm') {
+            e.preventDefault();
+            const date = new Date();
+            if (key === 'm') date.setDate(date.getDate() + 1);
+            setData('deadline', date.toISOString().split('T')[0]);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (task) {
@@ -124,6 +134,7 @@ export default function TaskForm({ open, onClose, task, categories = [], default
                                 type="date"
                                 value={data.deadline}
                                 onChange={(e) => setData('deadline', e.target.value)}
+                                onKeyDown={handleDateKeyDown}
                                 className="rounded-xl border-pink-200 focus:ring-pink-300"
                             />
                         </div>
