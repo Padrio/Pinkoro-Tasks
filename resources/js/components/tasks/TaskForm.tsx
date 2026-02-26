@@ -37,6 +37,7 @@ export default function TaskForm({ open, onClose, task, categories = [], default
         title: task?.title || '',
         description: task?.description || '',
         category_id: initialCategoryId,
+        priority: task?.priority || '',
         deadline: task?.deadline?.split('T')[0] || '',
         estimated_minutes: task?.estimated_minutes?.toString() || '',
     });
@@ -44,6 +45,7 @@ export default function TaskForm({ open, onClose, task, categories = [], default
     transform((data) => ({
         ...data,
         category_id: data.category_id ? Number(data.category_id) : null,
+        priority: data.priority || null,
         deadline: data.deadline || null,
         estimated_minutes: data.estimated_minutes ? Number(data.estimated_minutes) : null,
     }));
@@ -136,6 +138,28 @@ export default function TaskForm({ open, onClose, task, categories = [], default
                             </Select>
                         </div>
                     )}
+                    <div className="space-y-2">
+                        <Label>Priorität (optional)</Label>
+                        <div className="flex gap-2">
+                            {([
+                                { value: '', label: 'Keine', color: 'border-gray-200 text-gray-500 hover:bg-gray-50', activeColor: 'bg-gray-100 border-gray-400 text-gray-700' },
+                                { value: 'low', label: 'Niedrig', color: 'border-blue-200 text-blue-500 hover:bg-blue-50', activeColor: 'bg-blue-100 border-blue-400 text-blue-700' },
+                                { value: 'medium', label: 'Mittel', color: 'border-amber-200 text-amber-500 hover:bg-amber-50', activeColor: 'bg-amber-100 border-amber-400 text-amber-700' },
+                                { value: 'high', label: 'Hoch', color: 'border-red-200 text-red-500 hover:bg-red-50', activeColor: 'bg-red-100 border-red-400 text-red-700' },
+                            ] as const).map((option) => (
+                                <Button
+                                    key={option.value}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setData('priority', option.value)}
+                                    className={`flex-1 rounded-xl ${data.priority === option.value ? option.activeColor : option.color}`}
+                                >
+                                    {option.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="deadline">Deadline (optional)</Label>

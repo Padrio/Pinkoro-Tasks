@@ -64,6 +64,19 @@ export default function CategorySection({ category, categories, tasks, subcatego
     }, 0);
     const totalTaskCount = tasks.length + subcategoryTaskCount;
 
+    // Count priorities across all tasks (direct + subcategory)
+    const priorityCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        const allTasks = [
+            ...tasks,
+            ...subcategories.flatMap(sub => subcategoryTasks[String(sub.id)] ?? []),
+        ];
+        for (const t of allTasks) {
+            if (t.priority) counts[t.priority] = (counts[t.priority] ?? 0) + 1;
+        }
+        return counts;
+    }, [tasks, subcategories, subcategoryTasks]);
+
     // Unified sortable IDs: tasks first, then subcategories — all in one SortableContext
     const unifiedSortableIds = useMemo(() => {
         const ids: (number | string)[] = tasks.map(t => t.id);
@@ -144,8 +157,17 @@ export default function CategorySection({ category, categories, tasks, subcatego
                                     <span className="font-semibold text-gray-700 truncate">
                                         {category?.name ?? 'Ohne Kategorie'}
                                     </span>
-                                    <Badge variant="secondary" className="bg-pink-100 text-pink-600 border-0 text-xs">
+                                    <Badge variant="secondary" className="bg-pink-100 text-pink-600 border-0 text-xs flex items-center gap-1">
                                         {totalTaskCount}
+                                        {priorityCounts.high > 0 && (
+                                            <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />{priorityCounts.high}</span>
+                                        )}
+                                        {priorityCounts.medium > 0 && (
+                                            <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />{priorityCounts.medium}</span>
+                                        )}
+                                        {priorityCounts.low > 0 && (
+                                            <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />{priorityCounts.low}</span>
+                                        )}
                                     </Badge>
                                 </>
                             )}

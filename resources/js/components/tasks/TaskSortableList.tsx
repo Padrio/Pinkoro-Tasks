@@ -26,7 +26,7 @@ interface TaskSortableListProps {
     tasks: Task[];
     categories: Category[];
     settings: Settings;
-    sortMode?: 'manual' | 'deadline';
+    sortMode?: 'manual' | 'deadline' | 'priority';
 }
 
 export default function TaskSortableList({ tasks, categories, settings, sortMode = 'manual' }: TaskSortableListProps) {
@@ -319,6 +319,27 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
             order: newItems.map(t => ({ id: t.id, category_id: t.category_id })),
         }, { preserveState: true });
     };
+
+    if (sortMode === 'priority') {
+        const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+        const sortedActive = [...activeTasks].sort((a, b) => {
+            const aPrio = a.priority ? priorityOrder[a.priority] : 3;
+            const bPrio = b.priority ? priorityOrder[b.priority] : 3;
+            if (aPrio !== bPrio) return aPrio - bPrio;
+            return a.sort_order - b.sort_order;
+        });
+
+        return (
+            <div className="space-y-3">
+                <AnimatePresence mode="popLayout">
+                    {sortedActive.map((task) => (
+                        <TaskItem key={task.id} task={task} settings={settings} sortMode="priority" />
+                    ))}
+                </AnimatePresence>
+                <ArchiveSection tasks={completedTasks} categories={categories} settings={settings} />
+            </div>
+        );
+    }
 
     if (sortMode === 'deadline') {
         const sortedActive = [...activeTasks].sort((a, b) => {

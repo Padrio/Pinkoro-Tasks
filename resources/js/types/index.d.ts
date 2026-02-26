@@ -18,6 +18,7 @@ export interface Task {
     completed_at: string | null;
     sort_order: number;
     category_id: number | null;
+    priority: 'high' | 'medium' | 'low' | null;
     deadline: string | null;
     estimated_minutes: number | null;
     created_at: string;

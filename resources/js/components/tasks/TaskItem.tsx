@@ -17,10 +17,16 @@ import StartTimerConfirm from './StartTimerConfirm';
 import TimerRunningAlert from './TimerRunningAlert';
 import ManualTimeDialog from './ManualTimeDialog';
 
+const priorityColors: Record<string, string> = {
+    high: 'bg-red-400',
+    medium: 'bg-amber-400',
+    low: 'bg-blue-400',
+};
+
 interface TaskItemProps {
     task: Task;
     settings: Settings;
-    sortMode?: 'manual' | 'deadline';
+    sortMode?: 'manual' | 'deadline' | 'priority';
 }
 
 const deadlineColors: Record<string, string> = {
@@ -136,6 +142,10 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
                         onCheckedChange={handleToggle}
                         className="border-pink-300 data-[state=checked]:bg-pink-400 data-[state=checked]:border-pink-400"
                     />
+
+                    {task.priority && (
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${priorityColors[task.priority]}`} />
+                    )}
 
                     <div
                         className="flex-1 min-w-0 cursor-pointer"

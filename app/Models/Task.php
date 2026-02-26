@@ -16,6 +16,7 @@ class Task extends Model
         'completed_at',
         'sort_order',
         'category_id',
+        'priority',
         'deadline',
         'estimated_minutes',
     ];

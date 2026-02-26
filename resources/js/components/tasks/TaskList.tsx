@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Plus, ListTodo, ArrowUpDown, Calendar } from 'lucide-react';
+import { Plus, ListTodo, ArrowUpDown, Calendar, Flag } from 'lucide-react';
 import TaskForm from './TaskForm';
 import TaskSortableList from './TaskSortableList';
 import CategoryCreateButton from './CategoryCreateButton';
@@ -15,12 +15,17 @@ interface TaskListProps {
 
 export default function TaskList({ tasks, categories, settings }: TaskListProps) {
     const [showCreate, setShowCreate] = useState(false);
-    const [sortMode, setSortMode] = useState<'manual' | 'deadline'>(() => {
+    const [sortMode, setSortMode] = useState<'manual' | 'deadline' | 'priority'>(() => {
         if (typeof window !== 'undefined') {
-            return (localStorage.getItem('task_sort_mode') as 'manual' | 'deadline') || 'manual';
+            return (localStorage.getItem('task_sort_mode') as 'manual' | 'deadline' | 'priority') || 'manual';
         }
         return 'manual';
     });
+
+    const cycleSortMode = () => {
+        const next = sortMode === 'manual' ? 'deadline' : sortMode === 'deadline' ? 'priority' : 'manual';
+        setSortMode(next);
+    };
 
     useEffect(() => {
         localStorage.setItem('task_sort_mode', sortMode);
@@ -34,13 +39,15 @@ export default function TaskList({ tasks, categories, settings }: TaskListProps)
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSortMode(sortMode === 'manual' ? 'deadline' : 'manual')}
-                        className={`rounded-xl border-pink-200 hover:bg-pink-50 text-xs ${sortMode === 'deadline' ? 'bg-pink-50 text-pink-700' : ''}`}
+                        onClick={cycleSortMode}
+                        className={`rounded-xl border-pink-200 hover:bg-pink-50 text-xs ${sortMode !== 'manual' ? 'bg-pink-50 text-pink-700' : ''}`}
                     >
                         {sortMode === 'manual' ? (
                             <><ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />Manuell</>
-                        ) : (
+                        ) : sortMode === 'deadline' ? (
                             <><Calendar className="w-3.5 h-3.5 mr-1.5" />Nach Deadline</>
+                        ) : (
+                            <><Flag className="w-3.5 h-3.5 mr-1.5" />Nach Priorität</>
                         )}
                     </Button>
                     <CategoryCreateButton />
