@@ -41,6 +41,27 @@ export interface PomodoroSession {
     task?: Task;
 }
 
+export interface DailyGoalTask {
+    id: number;
+    title: string;
+    is_completed: boolean;
+    priority: 'high' | 'medium' | 'low' | null;
+    estimated_minutes: number | null;
+    actual_minutes: number;
+    sort_order: number;
+    time_slot_start: string | null;
+    time_slot_end: string | null;
+}
+
+export interface DailyGoal {
+    id: number;
+    date: string;
+    end_time: string | null;
+    completed_count: number;
+    total_count: number;
+    tasks: DailyGoalTask[];
+}
+
 export type TimerDisplayMode = 'ring_time' | 'ring_percent' | 'ring_only' | 'bar' | 'liquid' | 'liquid_only';
 
 export type SoundId =

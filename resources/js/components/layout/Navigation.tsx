@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import NavLink from './NavLink';
+import DailyGoalCountdown from './DailyGoalCountdown';
 import TimerMiniDisplay from './TimerMiniDisplay';
 import { LayoutDashboard, ListTodo, Settings, Timer } from 'lucide-react';
 
@@ -34,7 +35,10 @@ export default function Navigation() {
                             </span>
                         </NavLink>
                     </div>
-                    <TimerMiniDisplay />
+                    <div className="flex items-center gap-2">
+                        <DailyGoalCountdown />
+                        <TimerMiniDisplay />
+                    </div>
                 </div>
             </div>
         </nav>

@@ -10,8 +10,10 @@ import LevelWidget from '@/components/dashboard/LevelWidget';
 import AchievementsWidget from '@/components/dashboard/AchievementsWidget';
 import ProductivityScore from '@/components/dashboard/ProductivityScore';
 import TimerWidget from '@/components/timer/TimerWidget';
+import DailyGoalWidget from '@/components/dashboard/DailyGoalWidget';
 import AchievementToast from '@/components/dashboard/AchievementToast';
-import type { DashboardStats, Settings, Task, UrgentTasks } from '@/types';
+import TimeSlotReminder from '@/components/dashboard/TimeSlotReminder';
+import type { DashboardStats, DailyGoal, Settings, Task, UrgentTasks } from '@/types';
 
 interface StreakData {
     current_streak: number;
@@ -41,6 +43,7 @@ interface DashboardProps {
     stats: DashboardStats;
     period: string;
     recentTasks: Task[];
+    incompleteTasks: Task[];
     urgentTasks: UrgentTasks;
     settings: Settings;
     streak: StreakData;
@@ -56,8 +59,9 @@ function getGreeting(): string {
     return 'Guten Abend, Johanna 🌙';
 }
 
-export default function Dashboard({ stats, period, recentTasks, urgentTasks, settings, streak, level, score, achievements }: DashboardProps) {
+export default function Dashboard({ stats, period, recentTasks, incompleteTasks, urgentTasks, settings, streak, level, score, achievements }: DashboardProps) {
     const { props } = usePage();
+    const dailyGoal = (props as any).dailyGoal as DailyGoal | null;
     const newAchievements = (props as any).flash?.new_achievements as Array<{
         name: string;
         description: string;
@@ -83,6 +87,7 @@ export default function Dashboard({ stats, period, recentTasks, urgentTasks, set
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
+                        <DailyGoalWidget dailyGoal={dailyGoal} incompleteTasks={incompleteTasks} />
                         <StatsGrid stats={stats} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <StreakWidget streak={streak} />
@@ -105,6 +110,8 @@ export default function Dashboard({ stats, period, recentTasks, urgentTasks, set
             {newAchievements && newAchievements.length > 0 && (
                 <AchievementToast achievements={newAchievements} />
             )}
+
+            <TimeSlotReminder />
         </>
     );
 }

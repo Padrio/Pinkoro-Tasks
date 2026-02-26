@@ -30,6 +30,14 @@ class DashboardController extends Controller
                 ->latest()
                 ->limit(5)
                 ->get(),
+            'incompleteTasks' => Task::incomplete()->ordered()
+                ->withCount(['pomodoroSessions as pomodoro_count' => function ($q) {
+                    $q->where('is_completed', true)->where('type', 'pomodoro');
+                }])
+                ->withSum(['pomodoroSessions as actual_minutes' => function ($q) {
+                    $q->where('is_completed', true);
+                }], 'duration_minutes')
+                ->get(),
             'urgentTasks' => [
                 'overdue' => Task::overdue()->ordered()->get(),
                 'due_today' => Task::dueToday()->ordered()->get(),

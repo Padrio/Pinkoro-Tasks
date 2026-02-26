@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DailyGoalController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\PomodoroSessionController;
@@ -28,6 +29,10 @@ Route::post('/categories/reorder', [CategoryController::class, 'reorder'])->name
 Route::post('/sessions', [PomodoroSessionController::class, 'start'])->name('sessions.start');
 Route::patch('/sessions/{session}/complete', [PomodoroSessionController::class, 'complete'])->name('sessions.complete');
 Route::patch('/sessions/{session}/cancel', [PomodoroSessionController::class, 'cancel'])->name('sessions.cancel');
+
+// Daily Goal
+Route::post('/daily-goal', [DailyGoalController::class, 'store'])->name('daily-goal.store');
+Route::delete('/daily-goal', [DailyGoalController::class, 'destroy'])->name('daily-goal.destroy');
 
 // Settings
 Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');

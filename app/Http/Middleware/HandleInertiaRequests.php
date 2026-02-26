@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\DailyGoalController;
 use App\Models\PomodoroSession;
 use App\Services\SettingsService;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends Middleware
             'activeSession' => fn () => PomodoroSession::whereNull('ended_at')
                 ->with('task')
                 ->first(),
+            'dailyGoal' => fn () => DailyGoalController::todayForSharing(),
             'flash' => fn () => [
                 'motivation' => $request->session()->get('motivation'),
                 'bedtime' => $request->session()->get('bedtime'),

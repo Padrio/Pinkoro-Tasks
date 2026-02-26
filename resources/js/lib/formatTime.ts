@@ -29,6 +29,23 @@ export function getDeadlineStatus(deadline: string): 'overdue' | 'today' | 'soon
     return 'normal';
 }
 
+export function formatCountdown(endTimeStr: string): string {
+    const now = new Date();
+    const [hours, minutes] = endTimeStr.split(':').map(Number);
+    const end = new Date();
+    end.setHours(hours, minutes, 0, 0);
+
+    const diffMs = end.getTime() - now.getTime();
+    if (diffMs <= 0) return 'Feierabend!';
+
+    const diffMinutes = Math.ceil(diffMs / 60000);
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+
+    const h = Math.floor(diffMinutes / 60);
+    const m = diffMinutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 export function formatDeadline(deadline: string): string {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

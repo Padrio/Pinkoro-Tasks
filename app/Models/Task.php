@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -38,6 +39,12 @@ class Task extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function dailyGoals(): BelongsToMany
+    {
+        return $this->belongsToMany(DailyGoal::class, 'daily_goal_tasks')
+            ->withPivot('sort_order', 'time_slot_start', 'time_slot_end');
     }
 
     public function scopeIncomplete(Builder $query): Builder
