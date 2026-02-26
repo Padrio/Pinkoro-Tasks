@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
-import { playSoundById, playTick, playButtonClick } from '@/lib/chime';
+import { playSoundById, playTick, playButtonClick, playCountdownBeep } from '@/lib/chime';
 import type { SoundId } from '@/types';
 
-export type SoundEvent = 'pomodoro-end' | 'break-end' | 'task-complete' | 'tick' | 'button-click';
+export type SoundEvent = 'pomodoro-end' | 'break-end' | 'task-complete' | 'tick' | 'button-click' | 'countdown-beep' | 'countdown-beep-last';
 
 interface SoundContextType {
     playSound: (event: SoundEvent) => void;
@@ -81,6 +81,12 @@ export function SoundProvider({
                     break;
                 case 'button-click':
                     playButtonClick(soundVolume);
+                    break;
+                case 'countdown-beep':
+                    playCountdownBeep(soundVolume, false);
+                    break;
+                case 'countdown-beep-last':
+                    playCountdownBeep(soundVolume, true);
                     break;
             }
         },

@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -18,6 +19,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Plus, Save } from 'lucide-react';
+import { flattenCategories } from '@/lib/categoryUtils';
 import type { Task, Category } from '@/types';
 
 interface TaskFormProps {
@@ -97,13 +99,21 @@ export default function TaskForm({ open, onClose, task, categories = [], default
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Beschreibung (optional)</Label>
-                        <Input
+                        <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmit(e);
+                                }
+                            }}
                             placeholder="Zusätzliche Notizen..."
-                            className="rounded-xl border-pink-200 focus:ring-pink-300"
+                            rows={3}
+                            className="rounded-xl border-pink-200 focus:ring-pink-300 resize-y min-h-[80px]"
                         />
+                        <p className="text-xs text-gray-400">Shift+Enter für neue Zeile</p>
                     </div>
                     {categories.length > 0 && (
                         <div className="space-y-2">
@@ -117,9 +127,9 @@ export default function TaskForm({ open, onClose, task, categories = [], default
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Keine Kategorie</SelectItem>
-                                    {categories.map((cat) => (
+                                    {flattenCategories(categories).map((cat) => (
                                         <SelectItem key={cat.id} value={String(cat.id)}>
-                                            {cat.name}
+                                            {cat.depth === 1 ? `└ ${cat.name}` : cat.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

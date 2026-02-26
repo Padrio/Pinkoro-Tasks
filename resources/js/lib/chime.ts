@@ -229,6 +229,27 @@ export function playTick(volume: number): void {
     osc.stop(now + 0.05);
 }
 
+export function playCountdownBeep(volume: number, isLast: boolean = false): void {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    const vol = volume / 100;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    // Higher pitch for the final beep
+    osc.frequency.value = isLast ? 880 : 660;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol * 0.25, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (isLast ? 0.3 : 0.15));
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (isLast ? 0.3 : 0.15));
+}
+
 export function playButtonClick(volume: number): void {
     const ctx = getAudioContext();
     const now = ctx.currentTime;

@@ -19,6 +19,7 @@ import { AnimatePresence } from 'framer-motion';
 import CategorySection from './CategorySection';
 import ArchiveSection from './ArchiveSection';
 import TaskItem from './TaskItem';
+import { getAllCategories } from '@/lib/categoryUtils';
 import type { Task, Category, Settings } from '@/types';
 
 interface TaskSortableListProps {
@@ -59,16 +60,19 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
     const categorySortableIds = useMemo(() => categoryOrder.map(id => `cat-${id}`), [categoryOrder]);
 
+    // All categories including subcategories (flat)
+    const allCategories = useMemo(() => getAllCategories(categories), [categories]);
+
     // Separate active and completed tasks
     const activeTasks = useMemo(() => items.filter(t => !t.is_completed), [items]);
     const completedTasks = useMemo(() => items.filter(t => t.is_completed), [items]);
 
-    // Group active tasks by category
+    // Group active tasks by category (including subcategory IDs)
     const groupedTasks = useMemo(() => {
         const groups: Record<string, Task[]> = {};
 
-        // Initialize groups for each category
-        for (const cat of categories) {
+        // Initialize groups for each category and subcategory
+        for (const cat of allCategories) {
             groups[String(cat.id)] = [];
         }
         groups['null'] = [];
@@ -81,7 +85,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
         }
 
         return groups;
-    }, [activeTasks, categories]);
+    }, [activeTasks, allCategories]);
 
     const findCategoryForTask = (taskId: number): string => {
         for (const [key, tasks] of Object.entries(groupedTasks)) {
@@ -94,8 +98,8 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
         const { active, over } = event;
         if (!over) return;
 
-        // Ignore category drags in handleDragOver
-        if (String(active.id).startsWith('cat-')) return;
+        // Ignore category and subcategory drags in handleDragOver
+        if (String(active.id).startsWith('cat-') || String(active.id).startsWith('subcat-')) return;
 
         const activeId = active.id as number;
         const overId = over.id;
@@ -142,6 +146,122 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
         // Ignore if a category was dropped on a non-category
         if (String(active.id).startsWith('cat-')) return;
+
+        // Handle subcategory drag
+        if (String(active.id).startsWith('subcat-')) {
+            const subcatId = Number(String(active.id).replace('subcat-', ''));
+            const overStr = String(over.id);
+
+            // Find current parent of the dragged subcategory
+            const findSubcatParent = (id: number): Category | undefined => {
+                return categories.find(c => c.children?.some(ch => ch.id === id));
+            };
+
+            // Dropped onto another subcategory → reorder within parent
+            if (overStr.startsWith('subcat-')) {
+                const overSubcatId = Number(overStr.replace('subcat-', ''));
+                const parent = findSubcatParent(subcatId);
+                if (parent?.children) {
+                    const children = [...parent.children];
+                    const activeIdx = children.findIndex(c => c.id === subcatId);
+                    const overIdx = children.findIndex(c => c.id === overSubcatId);
+
+                    if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
+                        const [moved] = children.splice(activeIdx, 1);
+                        children.splice(overIdx, 0, moved);
+
+                        router.post(route('categories.reorder'), {
+                            order: children.map(c => c.id),
+                        }, { preserveState: true });
+                    }
+                }
+                return;
+            }
+
+            // Dropped onto a task → move that task + all below it into the subcategory
+            const overTaskId = Number(over.id);
+            if (!isNaN(overTaskId) && !overStr.startsWith('cat-') && !overStr.startsWith('subcat-') && !overStr.startsWith('category-')) {
+                const taskCatKey = findCategoryForTask(overTaskId);
+                const tasksInGroup = groupedTasks[taskCatKey] ?? [];
+                const dropIndex = tasksInGroup.findIndex(t => t.id === overTaskId);
+
+                if (dropIndex !== -1) {
+                    // Tasks from the drop position onward → move into subcategory
+                    const tasksToMove = tasksInGroup.slice(dropIndex);
+                    const taskIdsToMove = new Set(tasksToMove.map(t => t.id));
+
+                    // Determine target parent: the top-level category the task belongs to
+                    const taskCatId = taskCatKey === 'null' ? null : Number(taskCatKey);
+                    let targetParentId: number | null = null;
+                    if (taskCatId !== null) {
+                        const topLevel = categories.find(c => c.id === taskCatId);
+                        if (topLevel) {
+                            targetParentId = topLevel.id;
+                        } else {
+                            // Task is in a subcategory — find the parent
+                            for (const cat of categories) {
+                                if (cat.children?.some(ch => ch.id === taskCatId)) {
+                                    targetParentId = cat.id;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Move subcategory to the correct parent if needed
+                    const currentParent = findSubcatParent(subcatId);
+                    if (targetParentId !== null && currentParent?.id !== targetParentId) {
+                        router.put(route('categories.update', subcatId), {
+                            name: allCategories.find(c => c.id === subcatId)?.name ?? '',
+                            parent_id: targetParentId,
+                        }, { preserveState: true });
+                    }
+
+                    // Move tasks into the subcategory
+                    const newItems = items.map(t =>
+                        taskIdsToMove.has(t.id)
+                            ? { ...t, category_id: subcatId }
+                            : t
+                    );
+                    setItems(newItems);
+
+                    router.post(route('tasks.reorder'), {
+                        order: newItems.map(t => ({ id: t.id, category_id: t.category_id })),
+                    }, { preserveState: true });
+                }
+            }
+            // Dropped onto a category header → move subcategory to that parent
+            else if (overStr.startsWith('cat-')) {
+                const targetParentId = Number(overStr.replace('cat-', ''));
+                const currentParent = findSubcatParent(subcatId);
+                if (currentParent?.id !== targetParentId) {
+                    router.put(route('categories.update', subcatId), {
+                        name: allCategories.find(c => c.id === subcatId)?.name ?? '',
+                        parent_id: targetParentId,
+                    }, { preserveState: true });
+                }
+            }
+            // Dropped onto a subcategory's droppable zone (category-{id}) — treat as reorder if sibling
+            else if (overStr.startsWith('category-')) {
+                const overCatId = Number(overStr.replace('category-', ''));
+                const parent = findSubcatParent(subcatId);
+                if (parent?.children?.some(c => c.id === overCatId)) {
+                    const children = [...parent.children];
+                    const activeIdx = children.findIndex(c => c.id === subcatId);
+                    const overIdx = children.findIndex(c => c.id === overCatId);
+
+                    if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
+                        const [moved] = children.splice(activeIdx, 1);
+                        children.splice(overIdx, 0, moved);
+
+                        router.post(route('categories.reorder'), {
+                            order: children.map(c => c.id),
+                        }, { preserveState: true });
+                    }
+                }
+            }
+            return;
+        }
 
         const activeId = active.id as number;
         const overId = over.id;
@@ -238,6 +358,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
                             category={category}
                             categories={categories}
                             tasks={groupedTasks[String(category.id)] ?? []}
+                            subcategoryTasks={groupedTasks}
                             settings={settings}
                             sortableId={`cat-${category.id}`}
                         />
@@ -247,6 +368,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
                     category={null}
                     categories={categories}
                     tasks={groupedTasks['null'] ?? []}
+                    subcategoryTasks={groupedTasks}
                     settings={settings}
                 />
                 <ArchiveSection tasks={completedTasks} categories={categories} settings={settings} />

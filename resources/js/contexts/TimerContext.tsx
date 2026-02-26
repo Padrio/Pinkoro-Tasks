@@ -61,6 +61,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const startedAtRef = useRef<number>(0);
     const pausedRemainingRef = useRef<number>(0);
     const typeRef = useRef<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
+    const lastBeepSecondRef = useRef<number>(-1);
+
+    // Keep a ref to playSound so the interval always uses the latest version
+    const playSoundRef = useRef(playSound);
+    useEffect(() => { playSoundRef.current = playSound; }, [playSound]);
 
     const clearTimer = useCallback(() => {
         if (intervalRef.current) {
@@ -68,6 +73,31 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             intervalRef.current = null;
         }
     }, []);
+
+    const startInterval = useCallback(() => {
+        return setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
+            const rem = Math.max(0, pausedRemainingRef.current - elapsed);
+            setRemainingSeconds(rem);
+
+            // Countdown beep for last 5 seconds (play once per second)
+            if (rem > 0 && rem <= 5 && rem !== lastBeepSecondRef.current) {
+                lastBeepSecondRef.current = rem;
+                playSoundRef.current(rem === 1 ? 'countdown-beep-last' : 'countdown-beep');
+            }
+
+            if (rem <= 0) {
+                lastBeepSecondRef.current = -1;
+                clearTimer();
+                setStatus('completed');
+                playSoundRef.current(
+                    typeRef.current === 'pomodoro' || typeRef.current === 'custom'
+                        ? 'pomodoro-end'
+                        : 'break-end',
+                );
+            }
+        }, 250);
+    }, [clearTimer]);
 
     const startTimer = useCallback(
         (params: {
@@ -95,24 +125,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
             startedAtRef.current = Date.now();
             pausedRemainingRef.current = initialRemaining;
+            lastBeepSecondRef.current = -1;
 
-            intervalRef.current = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-                const rem = Math.max(0, pausedRemainingRef.current - elapsed);
-                setRemainingSeconds(rem);
-
-                if (rem <= 0) {
-                    clearTimer();
-                    setStatus('completed');
-                    playSound(
-                        typeRef.current === 'pomodoro' || typeRef.current === 'custom'
-                            ? 'pomodoro-end'
-                            : 'break-end',
-                    );
-                }
-            }, 250);
+            intervalRef.current = startInterval();
         },
-        [clearTimer, playSound],
+        [clearTimer, startInterval],
     );
 
     const pauseTimer = useCallback(() => {
@@ -126,23 +143,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (status !== 'paused') return;
         setStatus('running');
         startedAtRef.current = Date.now();
+        lastBeepSecondRef.current = -1;
 
-        intervalRef.current = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-            const rem = Math.max(0, pausedRemainingRef.current - elapsed);
-            setRemainingSeconds(rem);
-
-            if (rem <= 0) {
-                clearTimer();
-                setStatus('completed');
-                playSound(
-                    typeRef.current === 'pomodoro' || typeRef.current === 'custom'
-                        ? 'pomodoro-end'
-                        : 'break-end',
-                );
-            }
-        }, 250);
-    }, [status, clearTimer, playSound]);
+        intervalRef.current = startInterval();
+    }, [status, startInterval]);
 
     const resetTimer = useCallback(() => {
         clearTimer();
@@ -190,7 +194,16 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (restoredRef.current || status !== 'idle') return;
         restoredRef.current = true;
 
-        if (!activeSession || !activeSession.task) return;
+        if (!activeSession) return;
+
+        // Breaks have task_id=null, pomodoros have a task
+        const isBreak = activeSession.type === 'short_break' || activeSession.type === 'long_break';
+        if (!isBreak && !activeSession.task) return;
+
+        const breakTitles: Record<string, string> = {
+            short_break: 'Kurze Pause',
+            long_break: 'Lange Pause',
+        };
 
         const elapsedSeconds = Math.floor(
             (Date.now() - new Date(activeSession.started_at).getTime()) / 1000,
@@ -199,8 +212,10 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
         if (elapsedSeconds < total) {
             startTimer({
-                taskId: activeSession.task_id,
-                taskTitle: activeSession.task.title,
+                taskId: activeSession.task_id ?? 0,
+                taskTitle: isBreak
+                    ? breakTitles[activeSession.type] ?? 'Pause'
+                    : activeSession.task!.title,
                 sessionId: activeSession.id,
                 durationMinutes: activeSession.duration_minutes,
                 type: activeSession.type,

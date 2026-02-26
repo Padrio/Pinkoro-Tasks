@@ -139,6 +139,12 @@ export default function StartTimerConfirm({ open, onClose, task, settings }: Sta
                                 max={120}
                                 value={customMinutes}
                                 onChange={(e) => setCustomMinutes(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleStart();
+                                    }
+                                }}
                                 placeholder="Minuten"
                                 className="w-24 rounded-xl border-pink-200"
                                 autoFocus

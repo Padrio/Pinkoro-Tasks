@@ -19,6 +19,7 @@ const displayModes: { value: TimerDisplayMode; label: string; description: strin
     { value: 'ring_only', label: 'Nur Ring', description: 'Minimalistisch', icon: Eye },
     { value: 'bar', label: 'Balken', description: 'Horizontaler Fortschritt', icon: BarChart3 },
     { value: 'liquid', label: 'Liquid', description: 'Kreative Wellen-Animation', icon: Droplets },
+    { value: 'liquid_only', label: 'Nur Liquid', description: 'Wellen ohne Text', icon: Droplets },
 ];
 
 export default function TimerSettings({

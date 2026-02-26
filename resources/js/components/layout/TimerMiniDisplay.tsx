@@ -6,7 +6,7 @@ import { Timer } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { TimerDisplayMode } from '@/types';
 
-const MODES_WITHOUT_TIME: TimerDisplayMode[] = ['ring_only', 'ring_percent'];
+const MODES_WITHOUT_TIME: TimerDisplayMode[] = ['ring_only', 'ring_percent', 'liquid_only'];
 
 export default function TimerMiniDisplay() {
     const { status, remainingSeconds, taskTitle, type } = useTimer();

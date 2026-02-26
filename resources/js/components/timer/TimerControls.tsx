@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 export default function TimerControls() {
-    const { status, taskId, totalSeconds, remainingSeconds, pauseTimer, resumeTimer, resetTimer, completeTimer } = useTimer();
+    const { status, taskId, type, totalSeconds, remainingSeconds, pauseTimer, resumeTimer, resetTimer, completeTimer } = useTimer();
     const { playSound } = useSound();
 
     if (status === 'idle' || status === 'completed') return null;
+
+    const isBreak = type === 'short_break' || type === 'long_break';
 
     const handleComplete = () => {
         if (!taskId) return;
@@ -16,6 +18,10 @@ export default function TimerControls() {
         playSound('task-complete');
         completeTimer({ skipServerComplete: true });
         router.patch(route('tasks.toggle', taskId), { elapsed_minutes: elapsedMinutes }, { preserveState: true });
+    };
+
+    const handleSkipBreak = () => {
+        completeTimer();
     };
 
     return (
@@ -39,23 +45,37 @@ export default function TimerControls() {
                     Fortsetzen
                 </Button>
             )}
-            <Button
-                onClick={handleComplete}
-                size="default"
-                className="bg-green-400 hover:bg-green-500 text-white rounded-xl shadow-lg shadow-green-200/50"
-            >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Erledigt
-            </Button>
-            <Button
-                onClick={resetTimer}
-                variant="outline"
-                size="default"
-                className="rounded-xl border-pink-200 hover:bg-pink-50"
-            >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Abbrechen
-            </Button>
+            {isBreak ? (
+                <Button
+                    onClick={handleSkipBreak}
+                    variant="outline"
+                    size="default"
+                    className="rounded-xl border-pink-200 hover:bg-pink-50"
+                >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Pause beenden
+                </Button>
+            ) : (
+                <>
+                    <Button
+                        onClick={handleComplete}
+                        size="default"
+                        className="bg-green-400 hover:bg-green-500 text-white rounded-xl shadow-lg shadow-green-200/50"
+                    >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Erledigt
+                    </Button>
+                    <Button
+                        onClick={resetTimer}
+                        variant="outline"
+                        size="default"
+                        className="rounded-xl border-pink-200 hover:bg-pink-50"
+                    >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Abbrechen
+                    </Button>
+                </>
+            )}
         </div>
     );
 }

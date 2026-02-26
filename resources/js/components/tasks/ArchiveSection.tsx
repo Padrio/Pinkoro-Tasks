@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { ChevronRight, Archive, CalendarCheck } from 'lucide-react';
 import TaskItem from './TaskItem';
+import { getAllCategories } from '@/lib/categoryUtils';
 import type { Task, Category, Settings } from '@/types';
 
 interface ArchiveSectionProps {
@@ -33,16 +34,18 @@ function formatDateLabel(dateKey: string): string {
 }
 
 function groupByCategory(tasks: Task[], categories: Category[]) {
+    const allCats = getAllCategories(categories);
     const groups: { category: Category | null; tasks: Task[] }[] = [];
 
-    for (const cat of categories) {
+    for (const cat of allCats) {
         const catTasks = tasks.filter(t => t.category_id === cat.id);
         if (catTasks.length > 0) {
             groups.push({ category: cat, tasks: catTasks });
         }
     }
 
-    const uncategorized = tasks.filter(t => t.category_id === null);
+    const allCatIds = new Set(allCats.map(c => c.id));
+    const uncategorized = tasks.filter(t => t.category_id === null || !allCatIds.has(t.category_id));
     if (uncategorized.length > 0) {
         groups.push({ category: null, tasks: uncategorized });
     }

@@ -50,6 +50,12 @@ export default function ManualTimeDialog({ open, onClose, task }: ManualTimeDial
                         max={999}
                         value={minutes}
                         onChange={(e) => setMinutes(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                submit(parseInt(minutes) || (task.estimated_minutes ?? 0));
+                            }
+                        }}
                         placeholder={task.estimated_minutes ? `${task.estimated_minutes}` : 'Minuten'}
                         className="rounded-xl border-pink-200"
                         autoFocus

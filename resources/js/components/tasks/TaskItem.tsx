@@ -147,7 +147,7 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
                             {task.title}
                         </p>
                         {task.description && (
-                            <p className={`text-sm text-gray-500 ${isExpanded ? 'break-words' : 'truncate'}`}>{task.description}</p>
+                            <p className={`text-sm text-gray-500 ${isExpanded ? 'break-words whitespace-pre-line' : 'truncate'}`}>{task.description}</p>
                         )}
                     </div>
 

@@ -4,6 +4,8 @@ export interface Category {
     id: number;
     name: string;
     sort_order: number;
+    parent_id: number | null;
+    children?: Category[];
     created_at: string;
     updated_at: string;
 }
@@ -38,7 +40,7 @@ export interface PomodoroSession {
     task?: Task;
 }
 
-export type TimerDisplayMode = 'ring_time' | 'ring_percent' | 'ring_only' | 'bar' | 'liquid';
+export type TimerDisplayMode = 'ring_time' | 'ring_percent' | 'ring_only' | 'bar' | 'liquid' | 'liquid_only';
 
 export type SoundId =
     | 'glockenspiel'

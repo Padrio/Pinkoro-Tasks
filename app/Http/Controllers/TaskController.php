@@ -32,19 +32,32 @@ class TaskController extends Controller
                     $q->whereIn('type', ['pomodoro', 'custom'])->where('is_completed', true);
                 }], 'duration_minutes')
                 ->get(),
-            'categories' => Category::ordered()->get(),
+            'categories' => Category::whereNull('parent_id')->ordered()->with('children')->get(),
             'settings' => $this->settings->all(),
         ]);
     }
 
     public function store(TaskRequest $request): RedirectResponse
     {
-        $maxOrder = Task::max('sort_order') ?? 0;
+        $validated = $request->validated();
+        $categoryId = $validated['category_id'] ?? null;
 
-        Task::create([
-            ...$request->validated(),
-            'sort_order' => $maxOrder + 1,
-        ]);
+        $minOrder = Task::query()
+            ->where('is_completed', false)
+            ->when($categoryId !== null,
+                fn ($q) => $q->where('category_id', $categoryId),
+                fn ($q) => $q->whereNull('category_id'),
+            )
+            ->min('sort_order');
+
+        if ($minOrder !== null) {
+            Task::where('sort_order', '>=', $minOrder)->increment('sort_order');
+            $newOrder = $minOrder;
+        } else {
+            $newOrder = (Task::max('sort_order') ?? 0) + 1;
+        }
+
+        Task::create([...$validated, 'sort_order' => $newOrder]);
 
         return back();
     }

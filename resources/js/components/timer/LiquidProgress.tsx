@@ -6,9 +6,10 @@ interface LiquidProgressProps {
     progress: number; // 0 to 1
     seconds: number;
     size?: number;
+    showText?: boolean;
 }
 
-export default function LiquidProgress({ progress, seconds, size = 200 }: LiquidProgressProps) {
+export default function LiquidProgress({ progress, seconds, size = 200, showText = true }: LiquidProgressProps) {
     const id = useId();
     const percent = Math.round(progress * 100);
     const fillHeight = size * progress;
@@ -84,24 +85,28 @@ export default function LiquidProgress({ progress, seconds, size = 200 }: Liquid
                     strokeWidth={3}
                 />
                 {/* Text */}
-                <text
-                    x={size / 2}
-                    y={textY1}
-                    textAnchor="middle"
-                    className={`font-mono-timer ${textSize} font-bold`}
-                    fill="#1f2937"
-                >
-                    {formatTime(seconds)}
-                </text>
-                <text
-                    x={size / 2}
-                    y={textY2}
-                    textAnchor="middle"
-                    className={`${subTextSize} font-semibold`}
-                    fill="#6b7280"
-                >
-                    {percent}%
-                </text>
+                {showText && (
+                    <>
+                        <text
+                            x={size / 2}
+                            y={textY1}
+                            textAnchor="middle"
+                            className={`font-mono-timer ${textSize} font-bold`}
+                            fill="#1f2937"
+                        >
+                            {formatTime(seconds)}
+                        </text>
+                        <text
+                            x={size / 2}
+                            y={textY2}
+                            textAnchor="middle"
+                            className={`${subTextSize} font-semibold`}
+                            fill="#6b7280"
+                        >
+                            {percent}%
+                        </text>
+                    </>
+                )}
             </svg>
         </div>
     );

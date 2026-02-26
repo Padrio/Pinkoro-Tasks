@@ -13,13 +13,14 @@ import { Eye, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TimerDisplayMode } from '@/types';
 
-const DISPLAY_MODES: TimerDisplayMode[] = ['ring_time', 'ring_percent', 'ring_only', 'bar', 'liquid'];
+const DISPLAY_MODES: TimerDisplayMode[] = ['ring_time', 'ring_percent', 'ring_only', 'bar', 'liquid', 'liquid_only'];
 const MODE_LABELS: Record<TimerDisplayMode, string> = {
     ring_time: 'Ring + Zeit',
     ring_percent: 'Ring + Prozent',
     ring_only: 'Nur Ring',
     bar: 'Balken',
     liquid: 'Liquid',
+    liquid_only: 'Nur Liquid',
 };
 
 interface TimerWidgetProps {
@@ -129,6 +130,12 @@ export default function TimerWidget({ displayMode: propMode }: TimerWidgetProps)
                 return (
                     <div className="flex items-center justify-center" style={large ? { width: ringSize, height: ringSize } : undefined}>
                         <LiquidProgress progress={elapsed} seconds={remainingSeconds} size={large ? ringSize : 200} />
+                    </div>
+                );
+            case 'liquid_only':
+                return (
+                    <div className="flex items-center justify-center" style={large ? { width: ringSize, height: ringSize } : undefined}>
+                        <LiquidProgress progress={elapsed} seconds={remainingSeconds} size={large ? ringSize : 200} showText={false} />
                     </div>
                 );
             default:
