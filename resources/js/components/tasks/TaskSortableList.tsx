@@ -39,8 +39,8 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
     );
 
     // Sync with server data (include is_completed to re-sync on toggle)
-    const taskIds = tasks.map(t => `${t.id}-${t.category_id}-${t.is_completed}`).join(',');
-    const itemIds = items.map(t => `${t.id}-${t.category_id}-${t.is_completed}`).join(',');
+    const taskIds = tasks.map(t => `${t.id}-${t.category_id}-${t.is_completed}-${t.actual_minutes}-${t.pomodoro_count}`).join(',');
+    const itemIds = items.map(t => `${t.id}-${t.category_id}-${t.is_completed}-${t.actual_minutes}-${t.pomodoro_count}`).join(',');
     if (taskIds !== itemIds) {
         setItems(tasks);
     }
