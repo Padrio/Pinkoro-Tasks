@@ -32,7 +32,7 @@ class DashboardController extends Controller
                 ->get(),
             'incompleteTasks' => Task::incomplete()->ordered()
                 ->withCount(['pomodoroSessions as pomodoro_count' => function ($q) {
-                    $q->where('is_completed', true)->where('type', 'pomodoro');
+                    $q->where('is_completed', true)->whereIn('type', ['pomodoro', 'custom']);
                 }])
                 ->withSum(['pomodoroSessions as actual_minutes' => function ($q) {
                     $q->where('is_completed', true);

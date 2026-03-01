@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { useSortable } from '@dnd-kit/sortable';
@@ -36,7 +36,7 @@ const deadlineColors: Record<string, string> = {
     normal: 'bg-gray-100 text-gray-600 border-0',
 };
 
-export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskItemProps) {
+const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, sortMode = 'manual' }, ref) => {
     const { playSound } = useSound();
     const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle, totalSeconds, remainingSeconds, completeTimer } = useTimer();
     const [showEdit, setShowEdit] = useState(false);
@@ -53,6 +53,12 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
         transition,
         isDragging,
     } = useSortable({ id: task.id });
+
+    const combinedRef = (node: HTMLDivElement | null) => {
+        setNodeRef(node);
+        if (typeof ref === 'function') ref(node);
+        else if (ref) ref.current = node;
+    };
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -116,7 +122,7 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
     return (
         <>
             <motion.div
-                ref={setNodeRef}
+                ref={combinedRef}
                 style={style}
                 layout
                 initial={{ opacity: 0, y: 20 }}
@@ -234,4 +240,6 @@ export default function TaskItem({ task, settings, sortMode = 'manual' }: TaskIt
             />
         </>
     );
-}
+});
+TaskItem.displayName = 'TaskItem';
+export default TaskItem;

@@ -41,40 +41,42 @@ export default function ProductivityScore({ score }: ProductivityScoreProps) {
             </div>
 
             <div className="flex flex-col items-center">
-                <svg viewBox={`0 0 ${size} ${size}`} className="w-24 h-24 transform -rotate-90">
-                    <circle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.3)"
-                        strokeWidth={strokeWidth}
-                    />
-                    <motion.circle
-                        cx={size / 2}
-                        cy={size / 2}
-                        r={radius}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={strokeWidth}
-                        strokeLinecap="round"
-                        strokeDasharray={circumference}
-                        initial={{ strokeDashoffset: circumference }}
-                        animate={{ strokeDashoffset: offset }}
-                        transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
-                    />
-                </svg>
-                <div className="text-center -mt-[60px] mb-2">
-                    <motion.span
-                        className="text-2xl font-bold text-gray-800"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.8 }}
-                    >
-                        {score}
-                    </motion.span>
+                <div className="relative w-24 h-24">
+                    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full transform -rotate-90">
+                        <circle
+                            cx={size / 2}
+                            cy={size / 2}
+                            r={radius}
+                            fill="none"
+                            stroke="rgba(255,255,255,0.3)"
+                            strokeWidth={strokeWidth}
+                        />
+                        <motion.circle
+                            cx={size / 2}
+                            cy={size / 2}
+                            r={radius}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                            strokeDasharray={circumference}
+                            initial={{ strokeDashoffset: circumference }}
+                            animate={{ strokeDashoffset: offset }}
+                            transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <motion.span
+                            className="text-2xl font-bold text-gray-800"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.8 }}
+                        >
+                            {score}
+                        </motion.span>
+                    </div>
                 </div>
-                <p className="text-xs font-medium mt-3" style={{ color }}>
+                <p className="text-xs font-medium mt-2" style={{ color }}>
                     {getLabel(score)}
                 </p>
             </div>

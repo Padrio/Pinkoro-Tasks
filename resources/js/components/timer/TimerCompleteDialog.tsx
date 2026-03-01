@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { useTimer } from '@/contexts/TimerContext';
 import {
@@ -9,68 +10,175 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Clock, Coffee, Moon, Play } from 'lucide-react';
-import type { Settings } from '@/types';
+import { Input } from '@/components/ui/input';
+import { CheckCircle, Clock, Coffee, Moon, Play, Timer, X } from 'lucide-react';
+import type { Settings, DailyGoal, Task } from '@/types';
 
 interface TimerCompleteDialogProps {
     open: boolean;
     onClose: () => void;
 }
 
+const AUTO_CLOSE_MS = 120_000; // 2 minutes
+
 export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDialogProps) {
-    const { taskId, taskTitle, sessionId, type, completeTimer, pomodoroInSet, incrementPomodoro, resetPomodoroSet, startTimer } = useTimer();
+    const {
+        taskId, taskTitle, type, completeTimer, pomodoroInSet,
+        incrementPomodoro, resetPomodoroSet, startTimer, setPendingNextTask, pendingNextTask,
+    } = useTimer();
     const { props } = usePage();
     const settings = (props as any).settings as Settings | undefined;
+    const dailyGoal = (props as any).dailyGoal as DailyGoal | null;
 
     const pomodorosPerSet = settings?.pomodoros_per_set ?? 4;
     const shortBreakMin = settings?.short_break_duration ?? 5;
     const longBreakMin = settings?.long_break_duration ?? 15;
+    const pomodoroMin = settings?.pomodoro_duration ?? 25;
 
-    // After this pomodoro, will it be the last in the set?
     const nextPomodoroNumber = pomodoroInSet + 1;
     const isSetComplete = nextPomodoroNumber >= pomodorosPerSet;
     const suggestedBreakType = isSetComplete ? 'long_break' : 'short_break';
     const suggestedBreakMin = isSetComplete ? longBreakMin : shortBreakMin;
 
+    // Look up total pomodoro count for the current task from shared/page props
+    const incompleteTasks = (props as any).incompleteTasks as Task[] | undefined;
+    const getTaskPomodoroCount = (id: number | null): number => {
+        if (!id) return 0;
+        const fromDaily = dailyGoal?.tasks?.find(t => t.id === id);
+        if (fromDaily) return fromDaily.pomodoro_count;
+        const fromIncomplete = incompleteTasks?.find(t => t.id === id);
+        return fromIncomplete?.pomodoro_count ?? 0;
+    };
+
+    // Capture task info when dialog opens (before completeTimer clears it)
+    const [taskChoice, setTaskChoice] = useState<'not_done' | 'done' | null>(null);
+    const [showDurationPicker, setShowDurationPicker] = useState(false);
+    const [selectedMinutes, setSelectedMinutes] = useState(pomodoroMin);
+    const [selectedType, setSelectedType] = useState<'pomodoro' | 'custom'>('pomodoro');
+    const [customMinutes, setCustomMinutes] = useState('');
+    const savedTaskRef = useRef<{ id: number; title: string } | null>(null);
+    const savedPomodoroCountRef = useRef(0);
+
+    useEffect(() => {
+        if (open && (type === 'pomodoro' || type === 'custom')) {
+            savedTaskRef.current = taskId ? { id: taskId, title: taskTitle } : null;
+            savedPomodoroCountRef.current = getTaskPomodoroCount(taskId);
+            setTaskChoice(null);
+            setShowDurationPicker(false);
+            setSelectedMinutes(pomodoroMin);
+            setSelectedType('pomodoro');
+            setCustomMinutes('');
+        }
+    }, [open]);
+
+    // Auto-timeout: close dialog after 2 minutes (treat as "nicht erledigt")
+    useEffect(() => {
+        if (!open) return;
+        const timer = setTimeout(() => {
+            if (type === 'pomodoro' || type === 'custom') {
+                if (savedTaskRef.current) {
+                    setPendingNextTask(savedTaskRef.current);
+                }
+                incrementPomodoro();
+                completeTimer({ skipServerComplete: true });
+            } else {
+                handleBreakDoneWithAutoStart();
+                return;
+            }
+            onClose();
+        }, AUTO_CLOSE_MS);
+        return () => clearTimeout(timer);
+    }, [open]);
+
+    const findNextDailyTask = (): { id: number; title: string } | null => {
+        if (!dailyGoal?.tasks) return null;
+        const incompleteTasks = dailyGoal.tasks
+            .filter(t => !t.is_completed)
+            .sort((a, b) => a.sort_order - b.sort_order);
+
+        const currentId = savedTaskRef.current?.id ?? taskId;
+        const next = incompleteTasks.find(t => t.id !== currentId);
+        return next ? { id: next.id, title: next.title } : null;
+    };
+
     const handleTaskComplete = () => {
         incrementPomodoro();
         completeTimer({ skipServerComplete: true });
+        setTaskChoice('done');
 
-        // 1. Complete session first (records minutes in DB)
-        // 2. Then toggle task (so withSum picks up the completed session's minutes)
-        const completeSession = (then: () => void) => {
-            if (sessionId) {
-                router.patch(route('sessions.complete', sessionId), {}, {
-                    preserveState: true,
-                    onSuccess: () => then(),
-                    onError: () => then(),
-                });
-            } else {
-                then();
-            }
-        };
-
-        completeSession(() => {
-            if (taskId) {
-                router.patch(route('tasks.toggle', taskId), {}, { preserveState: true });
-            }
-        });
+        if (savedTaskRef.current) {
+            router.patch(route('tasks.toggle', savedTaskRef.current.id), {}, { preserveState: true });
+        }
+        const nextTask = findNextDailyTask();
+        setPendingNextTask(nextTask);
     };
 
     const handleTaskNotDone = () => {
         incrementPomodoro();
         completeTimer({ skipServerComplete: true });
+        setTaskChoice('not_done');
 
-        if (sessionId) {
-            router.patch(route('sessions.complete', sessionId), {}, { preserveState: true });
+        if (savedTaskRef.current) {
+            setPendingNextTask(savedTaskRef.current);
         }
     };
 
+    const handleKeinePause = () => {
+        // If no task choice yet, treat as "nicht fertig" first
+        if (taskChoice === null) {
+            handleTaskNotDone();
+        }
+        setShowDurationPicker(true);
+    };
+
+    const startNextPomodoro = () => {
+        const taskToStart = pendingNextTask;
+        if (!taskToStart) {
+            onClose();
+            return;
+        }
+
+        const minutes = selectedType === 'custom' ? (parseInt(customMinutes) || pomodoroMin) : selectedMinutes;
+        const timerType = selectedType === 'custom' ? 'custom' as const : 'pomodoro' as const;
+
+        router.post(route('sessions.start'), {
+            task_id: taskToStart.id,
+            type: timerType,
+            duration_minutes: minutes,
+        }, {
+            preserveState: true,
+            onSuccess: (page: any) => {
+                const activeSession = (page as any).props?.activeSession;
+                startTimer({
+                    taskId: taskToStart.id,
+                    taskTitle: taskToStart.title,
+                    sessionId: activeSession?.id || 0,
+                    durationMinutes: minutes,
+                    type: timerType,
+                });
+                setPendingNextTask(null);
+                onClose();
+            },
+            onError: () => {
+                setPendingNextTask(null);
+                onClose();
+            },
+        });
+    };
+
     const startBreak = (minutes: number, breakType: 'short_break' | 'long_break') => {
+        // If no task choice yet, treat as "nicht fertig" first
+        if (taskChoice === null) {
+            incrementPomodoro();
+            completeTimer({ skipServerComplete: true });
+            if (savedTaskRef.current) {
+                setPendingNextTask(savedTaskRef.current);
+            }
+        }
+
         if (isSetComplete) {
             resetPomodoroSet();
         }
-        // Start break timer locally (breaks don't need server session)
         router.post(route('sessions.start'), {
             task_id: null,
             type: breakType,
@@ -94,13 +202,136 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
         });
     };
 
-    const handleBreakDone = () => {
-        completeTimer();
-        onClose();
+    const handleBreakDoneWithAutoStart = () => {
+        completeTimer({ skipServerComplete: true });
+        if (pendingNextTask) {
+            router.post(route('sessions.start'), {
+                task_id: pendingNextTask.id,
+                type: 'pomodoro',
+                duration_minutes: pomodoroMin,
+            }, {
+                preserveState: true,
+                onSuccess: (page: any) => {
+                    const activeSession = (page as any).props?.activeSession;
+                    startTimer({
+                        taskId: pendingNextTask.id,
+                        taskTitle: pendingNextTask.title,
+                        sessionId: activeSession?.id || 0,
+                        durationMinutes: pomodoroMin,
+                        type: 'pomodoro',
+                    });
+                    setPendingNextTask(null);
+                    onClose();
+                },
+                onError: () => {
+                    setPendingNextTask(null);
+                    onClose();
+                },
+            });
+        } else {
+            onClose();
+        }
     };
 
     // POMODORO COMPLETED
     if (type === 'pomodoro' || type === 'custom') {
+        // Duration picker sub-view
+        if (showDurationPicker) {
+            const taskName = pendingNextTask?.title ?? savedTaskRef.current?.title ?? '';
+            return (
+                <AlertDialog open={open}>
+                    <AlertDialogContent className="glass border-white/50">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2 text-gray-800">
+                                <Timer className="w-6 h-6 text-pink-500" />
+                                Nächster Pomodoro
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-600">
+                                {taskName && <>Timer für &ldquo;{taskName}&rdquo; starten</>}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-2 py-2">
+                            <Button
+                                variant={selectedType === 'pomodoro' ? 'default' : 'outline'}
+                                className={`w-full rounded-xl justify-start ${
+                                    selectedType === 'pomodoro'
+                                        ? 'bg-pink-400 hover:bg-pink-500 text-white'
+                                        : 'border-pink-200 hover:bg-pink-50'
+                                }`}
+                                onClick={() => {
+                                    setSelectedType('pomodoro');
+                                    setSelectedMinutes(pomodoroMin);
+                                }}
+                            >
+                                Pomodoro ({pomodoroMin} Min)
+                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant={selectedType === 'custom' ? 'default' : 'outline'}
+                                    className={`rounded-xl ${
+                                        selectedType === 'custom'
+                                            ? 'bg-pink-400 hover:bg-pink-500 text-white'
+                                            : 'border-pink-200 hover:bg-pink-50'
+                                    }`}
+                                    onClick={() => setSelectedType('custom')}
+                                >
+                                    Custom
+                                </Button>
+                                {selectedType === 'custom' && (
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={120}
+                                        value={customMinutes}
+                                        onChange={(e) => setCustomMinutes(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                startNextPomodoro();
+                                            }
+                                        }}
+                                        placeholder="Minuten"
+                                        className="w-24 rounded-xl border-pink-200"
+                                        autoFocus
+                                    />
+                                )}
+                            </div>
+                        </div>
+                        <AlertDialogFooter className="gap-2 sm:justify-between">
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setPendingNextTask(null);
+                                    onClose();
+                                }}
+                                className="rounded-xl text-gray-400 hover:text-gray-600"
+                                size="sm"
+                            >
+                                <X className="w-4 h-4 mr-1" />
+                                Überspringen
+                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowDurationPicker(false)}
+                                    className="rounded-xl border-pink-200"
+                                >
+                                    Zurück
+                                </Button>
+                                <Button
+                                    onClick={startNextPomodoro}
+                                    className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl"
+                                >
+                                    <Play className="w-4 h-4 mr-2" />
+                                    Starten
+                                </Button>
+                            </div>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            );
+        }
+
         return (
             <AlertDialog open={open}>
                 <AlertDialogContent className="glass border-white/50">
@@ -111,7 +342,10 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-600">
                             {taskTitle && (
-                                <>Pomodoro {nextPomodoroNumber}/{pomodorosPerSet} für &ldquo;{taskTitle}&rdquo; ist fertig. </>
+                                <>
+                                    &ldquo;{taskTitle}&rdquo; — Session #{savedPomodoroCountRef.current + 1}
+                                    {' '}(Set: {nextPomodoroNumber}/{pomodorosPerSet}).{' '}
+                                </>
                             )}
                             {isSetComplete
                                 ? 'Du hast ein ganzes Set geschafft! Zeit für eine lange Pause.'
@@ -120,21 +354,30 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
-                    {/* Task complete buttons */}
+                    {/* Task complete buttons — always visible so user can change choice */}
                     <div className="flex items-center gap-2 py-1">
                         <Button
                             onClick={handleTaskNotDone}
-                            variant="outline"
+                            variant={taskChoice === 'not_done' ? 'default' : 'outline'}
                             size="sm"
-                            className="rounded-xl border-pink-200 flex-1"
+                            className={`rounded-xl flex-1 ${
+                                taskChoice === 'not_done'
+                                    ? 'bg-gray-500 hover:bg-gray-600 text-white'
+                                    : 'border-pink-200'
+                            }`}
                         >
                             <Clock className="w-4 h-4 mr-1.5" />
                             Noch nicht fertig
                         </Button>
                         <Button
                             onClick={handleTaskComplete}
+                            variant={taskChoice === 'done' ? 'default' : 'outline'}
                             size="sm"
-                            className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl flex-1"
+                            className={`rounded-xl flex-1 ${
+                                taskChoice === 'done'
+                                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                                    : 'bg-pink-400 hover:bg-pink-500 text-white'
+                            }`}
                         >
                             <CheckCircle className="w-4 h-4 mr-1.5" />
                             Task erledigt!
@@ -183,10 +426,11 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
 
                     <AlertDialogFooter>
                         <Button
-                            onClick={onClose}
+                            onClick={handleKeinePause}
                             variant="ghost"
                             className="rounded-xl text-gray-500"
                         >
+                            <Play className="w-4 h-4 mr-1.5" />
                             Keine Pause
                         </Button>
                     </AlertDialogFooter>
@@ -205,15 +449,17 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
                         Pause vorbei!
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-gray-600">
-                        {type === 'long_break'
-                            ? 'Deine lange Pause ist vorbei. Bereit für ein neues Pomodoro-Set?'
-                            : 'Deine kurze Pause ist vorbei. Bereit für den nächsten Pomodoro?'
+                        {pendingNextTask
+                            ? `Deine Pause ist vorbei. Nächster Task: "${pendingNextTask.title}"`
+                            : type === 'long_break'
+                                ? 'Deine lange Pause ist vorbei. Bereit für ein neues Pomodoro-Set?'
+                                : 'Deine kurze Pause ist vorbei. Bereit für den nächsten Pomodoro?'
                         }
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <Button
-                        onClick={handleBreakDone}
+                        onClick={handleBreakDoneWithAutoStart}
                         className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl"
                     >
                         <Play className="w-4 h-4 mr-2" />

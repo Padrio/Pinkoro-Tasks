@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\SessionType;
 use App\Models\Achievement;
 use App\Models\PomodoroSession;
 use App\Models\Task;
@@ -54,7 +53,7 @@ class GamificationService
         $prevDate = null;
 
         foreach ($dates->sortBy(fn ($d) => $d) as $date) {
-            if ($prevDate === null || $date->diffInDays($prevDate) === 1) {
+            if ($prevDate === null || (int) abs($date->diffInDays($prevDate)) === 1) {
                 $streak++;
             } else {
                 $streak = 1;
@@ -191,18 +190,12 @@ class GamificationService
             }
 
             $unlocked = match (true) {
-                str_starts_with($achievement->key, 'pomodoro_') || $achievement->key === 'first_pomodoro'
-                    => $totalPomodoros >= $achievement->threshold,
-                str_starts_with($achievement->key, 'streak_')
-                    => max($streak['current_streak'], $streak['longest_streak']) >= $achievement->threshold,
-                str_starts_with($achievement->key, 'tasks_')
-                    => $totalCompletedTasks >= $achievement->threshold,
-                $achievement->key === 'focus_hour'
-                    => $todayMinutes >= $achievement->threshold,
-                $achievement->key === 'early_bird'
-                    => $hasEarlyBird,
-                $achievement->key === 'night_owl'
-                    => $hasNightOwl,
+                str_starts_with($achievement->key, 'pomodoro_') || $achievement->key === 'first_pomodoro' => $totalPomodoros >= $achievement->threshold,
+                str_starts_with($achievement->key, 'streak_') => max($streak['current_streak'], $streak['longest_streak']) >= $achievement->threshold,
+                str_starts_with($achievement->key, 'tasks_') => $totalCompletedTasks >= $achievement->threshold,
+                $achievement->key === 'focus_hour' => $todayMinutes >= $achievement->threshold,
+                $achievement->key === 'early_bird' => $hasEarlyBird,
+                $achievement->key === 'night_owl' => $hasNightOwl,
                 default => false,
             };
 

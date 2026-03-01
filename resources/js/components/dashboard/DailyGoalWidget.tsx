@@ -41,13 +41,43 @@ function timeSlotToMinutes(slot: string | null): number {
 }
 
 function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
-    return [...tasks].sort((a, b) => {
-        // Completed tasks go to the bottom
+    // First, separate by sort_order (the drag-drop order from the planning dialog)
+    const byOrder = [...tasks].sort((a, b) => a.sort_order - b.sort_order);
+
+    // Split into time-slotted and unslotted, preserving sort_order
+    const slotted = byOrder.filter(t => t.time_slot_start);
+    const unslotted = byOrder.filter(t => !t.time_slot_start);
+
+    // Sort slotted tasks by their time_slot_start
+    slotted.sort((a, b) => timeSlotToMinutes(a.time_slot_start) - timeSlotToMinutes(b.time_slot_start));
+
+    // Interleave: unslotted tasks keep their sort_order positions among slotted
+    // Build combined list by placing each unslotted task at its original sort_order rank
+    const result: DailyGoalTask[] = [];
+    let slotIdx = 0;
+    let unslotIdx = 0;
+
+    for (let i = 0; i < byOrder.length; i++) {
+        const original = byOrder[i];
+        if (original.time_slot_start) {
+            // This position had a slotted task — place next slotted (by time)
+            if (slotIdx < slotted.length) {
+                result.push(slotted[slotIdx++]);
+            }
+        } else {
+            // This position had an unslotted task — place it here
+            if (unslotIdx < unslotted.length) {
+                result.push(unslotted[unslotIdx++]);
+            }
+        }
+    }
+
+    // Finally, move completed tasks to the bottom
+    return result.sort((a, b) => {
         if (a.is_completed !== b.is_completed) {
             return a.is_completed ? 1 : -1;
         }
-        // Sort by time slot start (tasks without slot go after those with)
-        return timeSlotToMinutes(a.time_slot_start) - timeSlotToMinutes(b.time_slot_start);
+        return 0; // preserve interleaved order
     });
 }
 
@@ -169,10 +199,11 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks }: DailyGoa
 
             {sortedTasks.length > 0 && (
                 <div className="space-y-1">
-                    {sortedTasks.map(task => (
+                    {sortedTasks.map((task, idx) => (
                         <DailyGoalTaskRow
                             key={task.id}
                             task={task}
+                            index={idx + 1}
                             isTimeSlotActive={activeIds.has(task.id)}
                             settings={settings}
                         />

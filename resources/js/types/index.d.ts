@@ -48,6 +48,7 @@ export interface DailyGoalTask {
     priority: 'high' | 'medium' | 'low' | null;
     estimated_minutes: number | null;
     actual_minutes: number;
+    pomodoro_count: number;
     sort_order: number;
     time_slot_start: string | null;
     time_slot_end: string | null;

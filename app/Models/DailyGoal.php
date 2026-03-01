@@ -28,15 +28,15 @@ class DailyGoal extends Model
         $goal = static::where('date', today())
             ->with(['tasks' => function ($query) {
                 $query->withCount(['pomodoroSessions as pomodoro_count' => function ($q) {
-                    $q->where('is_completed', true)->where('type', 'pomodoro');
+                    $q->where('is_completed', true)->whereIn('type', ['pomodoro', 'custom']);
                 }])
-                ->withSum(['pomodoroSessions as actual_minutes' => function ($q) {
-                    $q->where('is_completed', true);
-                }], 'duration_minutes');
+                    ->withSum(['pomodoroSessions as actual_minutes' => function ($q) {
+                        $q->where('is_completed', true);
+                    }], 'duration_minutes');
             }])
             ->first();
 
-        if (!$goal) {
+        if (! $goal) {
             return null;
         }
 
@@ -47,6 +47,7 @@ class DailyGoal extends Model
             'priority' => $task->priority,
             'estimated_minutes' => $task->estimated_minutes,
             'actual_minutes' => (int) ($task->actual_minutes ?? 0),
+            'pomodoro_count' => (int) ($task->pomodoro_count ?? 0),
             'sort_order' => $task->pivot->sort_order,
             'time_slot_start' => $task->pivot->time_slot_start,
             'time_slot_end' => $task->pivot->time_slot_end,

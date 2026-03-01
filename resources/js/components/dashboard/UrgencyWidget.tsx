@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from '@inertiajs/react';
 import { AlertTriangle, Clock, CalendarClock, CheckCircle } from 'lucide-react';
-import { formatDeadline } from '@/lib/formatTime';
+import { formatDeadline, formatMinutes } from '@/lib/formatTime';
 import type { UrgentTasks, Task } from '@/types';
 
 interface UrgencyWidgetProps {
@@ -20,13 +20,15 @@ interface SectionProps {
 function UrgencySection({ title, tasks, icon, accentColor, textColor, bgColor }: SectionProps) {
     if (tasks.length === 0) return null;
 
+    const totalEstimated = tasks.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0);
+
     return (
         <div className="space-y-2">
             <div className={`flex items-center gap-2 ${textColor}`}>
                 {icon}
                 <span className="text-sm font-semibold uppercase tracking-wide">{title}</span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${bgColor} ${textColor}`}>
-                    {tasks.length}
+                    {tasks.length}{totalEstimated > 0 ? ` · ~${formatMinutes(totalEstimated)}` : ''}
                 </span>
             </div>
             <div className="space-y-1.5">

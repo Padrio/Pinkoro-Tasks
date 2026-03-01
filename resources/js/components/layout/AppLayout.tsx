@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { usePage } from '@inertiajs/react';
 import Navigation from './Navigation';
+import MotivationCat from './MotivationCat';
 import { TimerProvider } from '@/contexts/TimerContext';
 import { SoundProvider } from '@/contexts/SoundContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -28,6 +29,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         {children}
                     </main>
                     <Toaster />
+                    <MotivationCat />
                 </div>
             </TimerProvider>
         </SoundProvider>

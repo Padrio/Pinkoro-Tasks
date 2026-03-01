@@ -140,8 +140,13 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
     };
 
     return (
-        <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="glass border-white/50 max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden">
+        <Dialog open={open} onOpenChange={() => {}}>
+            <DialogContent
+                className="glass border-white/50 max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden [&>button.absolute]:hidden"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle className="text-gray-800">Tag planen</DialogTitle>
                     <DialogDescription className="text-gray-500">
@@ -228,7 +233,15 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
                         </div>
                     )}
 
-                    <DialogFooter>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onClose}
+                            className="rounded-xl border-pink-200"
+                        >
+                            Abbrechen
+                        </Button>
                         <Button
                             type="submit"
                             disabled={processing}

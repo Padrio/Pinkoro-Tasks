@@ -12,11 +12,12 @@ import type { DailyGoalTask, Settings, Task } from '@/types';
 
 interface DailyGoalTaskRowProps {
     task: DailyGoalTask;
+    index: number;
     isTimeSlotActive: boolean;
     settings: Settings;
 }
 
-export default function DailyGoalTaskRow({ task, isTimeSlotActive, settings }: DailyGoalTaskRowProps) {
+export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, settings }: DailyGoalTaskRowProps) {
     const { playSound } = useSound();
     const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle } = useTimer();
     const [showTimerConfirm, setShowTimerConfirm] = useState(false);
@@ -58,7 +59,7 @@ export default function DailyGoalTaskRow({ task, isTimeSlotActive, settings }: D
                 }`}
             >
                 <span className="text-xs text-gray-400 w-[90px] flex-shrink-0 font-mono-timer">
-                    {timeSlot ?? '—'}
+                    {timeSlot ? `${index}. ${timeSlot}` : `${index}.`}
                 </span>
 
                 <Checkbox

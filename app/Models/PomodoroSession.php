@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Enums\SessionType;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 class PomodoroSession extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'task_id',
         'duration_minutes',

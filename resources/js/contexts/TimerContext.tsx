@@ -3,6 +3,11 @@ import { router, usePage } from '@inertiajs/react';
 import { useSound } from './SoundContext';
 import type { PomodoroSession, TimerStatus } from '@/types';
 
+export interface PendingNextTask {
+    id: number;
+    title: string;
+}
+
 interface TimerContextType {
     taskId: number | null;
     taskTitle: string;
@@ -12,6 +17,7 @@ interface TimerContextType {
     status: TimerStatus;
     type: 'pomodoro' | 'short_break' | 'long_break' | 'custom';
     pomodoroInSet: number;
+    pendingNextTask: PendingNextTask | null;
     startTimer: (params: {
         taskId: number;
         taskTitle: string;
@@ -25,6 +31,7 @@ interface TimerContextType {
     completeTimer: (options?: { skipServerComplete?: boolean }) => void;
     incrementPomodoro: () => void;
     resetPomodoroSet: () => void;
+    setPendingNextTask: (task: PendingNextTask | null) => void;
 }
 
 const TimerContext = createContext<TimerContextType>({
@@ -36,6 +43,7 @@ const TimerContext = createContext<TimerContextType>({
     status: 'idle',
     type: 'pomodoro',
     pomodoroInSet: 0,
+    pendingNextTask: null,
     startTimer: () => {},
     pauseTimer: () => {},
     resumeTimer: () => {},
@@ -43,6 +51,7 @@ const TimerContext = createContext<TimerContextType>({
     completeTimer: () => {},
     incrementPomodoro: () => {},
     resetPomodoroSet: () => {},
+    setPendingNextTask: () => {},
 });
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
@@ -56,12 +65,15 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [status, setStatus] = useState<TimerStatus>('idle');
     const [type, setType] = useState<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
     const [pomodoroInSet, setPomodoroInSet] = useState(0);
+    const [pendingNextTask, setPendingNextTask] = useState<PendingNextTask | null>(null);
 
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startedAtRef = useRef<number>(0);
     const pausedRemainingRef = useRef<number>(0);
     const typeRef = useRef<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
+    const sessionIdRef = useRef<number | null>(null);
     const lastBeepSecondRef = useRef<number>(-1);
+    const autoCompletedRef = useRef(false);
 
     // Keep a ref to playSound so the interval always uses the latest version
     const playSoundRef = useRef(playSound);
@@ -95,6 +107,23 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                         ? 'pomodoro-end'
                         : 'break-end',
                 );
+                // Auto-complete session server-side so time is always recorded.
+                // Use fetch() instead of router.patch() so Inertia can't cancel it.
+                if (sessionIdRef.current && !autoCompletedRef.current) {
+                    autoCompletedRef.current = true;
+                    const xsrf = decodeURIComponent(
+                        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+                    );
+                    fetch(route('sessions.complete', sessionIdRef.current), {
+                        method: 'PATCH',
+                        headers: { 'X-XSRF-TOKEN': xsrf, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                        redirect: 'manual',
+                    }).then(() => {
+                        // Refresh Inertia page data so actual_minutes updates immediately
+                        router.reload();
+                    }).catch(() => {});
+                }
             }
         }, 250);
     }, [clearTimer]);
@@ -121,6 +150,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             setRemainingSeconds(initialRemaining);
             setType(params.type);
             typeRef.current = params.type;
+            sessionIdRef.current = params.sessionId;
+            autoCompletedRef.current = false;
             setStatus('running');
 
             startedAtRef.current = Date.now();
@@ -153,6 +184,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         if (sessionId) {
             router.patch(route('sessions.cancel', sessionId), {}, { preserveState: true });
         }
+        sessionIdRef.current = null;
+        autoCompletedRef.current = false;
         setTaskId(null);
         setTaskTitle('');
         setSessionId(null);
@@ -164,9 +197,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
     const completeTimer = useCallback((options?: { skipServerComplete?: boolean }) => {
         clearTimer();
-        if (sessionId && !options?.skipServerComplete) {
+        if (sessionId && !options?.skipServerComplete && !autoCompletedRef.current) {
             router.patch(route('sessions.complete', sessionId), {}, { preserveState: true });
         }
+        sessionIdRef.current = null;
+        autoCompletedRef.current = false;
         setStatus('idle');
         setTaskId(null);
         setTaskTitle('');
@@ -238,6 +273,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 status,
                 type,
                 pomodoroInSet,
+                pendingNextTask,
                 startTimer,
                 pauseTimer,
                 resumeTimer,
@@ -245,6 +281,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 completeTimer,
                 incrementPomodoro,
                 resetPomodoroSet,
+                setPendingNextTask,
             }}
         >
             {children}
