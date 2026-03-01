@@ -41,6 +41,7 @@ export default function DailyGoalTaskEntry({ entry, onRemove, onUpdate }: DailyG
             }`}
         >
             <button
+                type="button"
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
