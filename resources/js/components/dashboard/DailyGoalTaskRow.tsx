@@ -59,7 +59,9 @@ export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, settin
                 }`}
             >
                 <span className="text-xs text-gray-400 w-[90px] flex-shrink-0 font-mono-timer">
-                    {timeSlot ? `${index}. ${timeSlot}` : `${index}.`}
+                    {task.is_completed
+                        ? (timeSlot ?? '\u00A0')
+                        : (timeSlot ? `${index}. ${timeSlot}` : `${index}.`)}
                 </span>
 
                 <Checkbox

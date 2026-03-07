@@ -45,6 +45,7 @@ export interface DailyGoalTask {
     id: number;
     title: string;
     is_completed: boolean;
+    completed_at: string | null;
     priority: 'high' | 'medium' | 'low' | null;
     estimated_minutes: number | null;
     actual_minutes: number;

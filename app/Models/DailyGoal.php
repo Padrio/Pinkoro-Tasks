@@ -44,6 +44,7 @@ class DailyGoal extends Model
             'id' => $task->id,
             'title' => $task->title,
             'is_completed' => $task->is_completed,
+            'completed_at' => $task->completed_at?->toIso8601String(),
             'priority' => $task->priority,
             'estimated_minutes' => $task->estimated_minutes,
             'actual_minutes' => (int) ($task->actual_minutes ?? 0),

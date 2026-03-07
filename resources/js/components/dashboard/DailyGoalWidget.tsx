@@ -41,6 +41,14 @@ function timeSlotToMinutes(slot: string | null): number {
     return h * 60 + m;
 }
 
+function isTimeSlotPast(task: DailyGoalTask): boolean {
+    if (!task.time_slot_end) return false;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [eh, em] = task.time_slot_end.split(':').map(Number);
+    return currentMinutes >= eh * 60 + em;
+}
+
 function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
     // First, separate by sort_order (the drag-drop order from the planning dialog)
     const byOrder = [...tasks].sort((a, b) => a.sort_order - b.sort_order);
@@ -53,33 +61,48 @@ function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
     slotted.sort((a, b) => timeSlotToMinutes(a.time_slot_start) - timeSlotToMinutes(b.time_slot_start));
 
     // Interleave: unslotted tasks keep their sort_order positions among slotted
-    // Build combined list by placing each unslotted task at its original sort_order rank
-    const result: DailyGoalTask[] = [];
+    const interleaved: DailyGoalTask[] = [];
     let slotIdx = 0;
     let unslotIdx = 0;
 
     for (let i = 0; i < byOrder.length; i++) {
         const original = byOrder[i];
         if (original.time_slot_start) {
-            // This position had a slotted task — place next slotted (by time)
             if (slotIdx < slotted.length) {
-                result.push(slotted[slotIdx++]);
+                interleaved.push(slotted[slotIdx++]);
             }
         } else {
-            // This position had an unslotted task — place it here
             if (unslotIdx < unslotted.length) {
-                result.push(unslotted[unslotIdx++]);
+                interleaved.push(unslotted[unslotIdx++]);
             }
         }
     }
 
-    // Finally, move completed tasks to the bottom
-    return result.sort((a, b) => {
-        if (a.is_completed !== b.is_completed) {
-            return a.is_completed ? 1 : -1;
+    // Split into 3 groups:
+    // 1. Active incomplete (not overdue)
+    // 2. Overdue incomplete (time slot passed but not completed)
+    // 3. Completed (sorted by completed_at descending — most recently completed first)
+    const active: DailyGoalTask[] = [];
+    const overdue: DailyGoalTask[] = [];
+    const completed: DailyGoalTask[] = [];
+
+    for (const task of interleaved) {
+        if (task.is_completed) {
+            completed.push(task);
+        } else if (isTimeSlotPast(task)) {
+            overdue.push(task);
+        } else {
+            active.push(task);
         }
-        return 0; // preserve interleaved order
+    }
+
+    // Completed: most recently completed first (top), earliest completed last (bottom)
+    completed.sort((a, b) => {
+        if (!a.completed_at || !b.completed_at) return 0;
+        return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime();
     });
+
+    return [...active, ...overdue, ...completed];
 }
 
 export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories = [] }: DailyGoalWidgetProps) {
@@ -201,15 +224,18 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories
 
             {sortedTasks.length > 0 && (
                 <div className="space-y-1">
-                    {sortedTasks.map((task, idx) => (
-                        <DailyGoalTaskRow
-                            key={task.id}
-                            task={task}
-                            index={idx + 1}
-                            isTimeSlotActive={activeIds.has(task.id)}
-                            settings={settings}
-                        />
-                    ))}
+                    {(() => {
+                        let incompleteIdx = 0;
+                        return sortedTasks.map((task) => (
+                            <DailyGoalTaskRow
+                                key={task.id}
+                                task={task}
+                                index={task.is_completed ? 0 : ++incompleteIdx}
+                                isTimeSlotActive={activeIds.has(task.id)}
+                                settings={settings}
+                            />
+                        ));
+                    })()}
                 </div>
             )}
 
