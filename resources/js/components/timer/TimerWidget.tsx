@@ -28,9 +28,8 @@ interface TimerWidgetProps {
 }
 
 export default function TimerWidget({ displayMode: propMode }: TimerWidgetProps) {
-    const { status, remainingSeconds, totalSeconds, taskTitle, type } = useTimer();
+    const { status, remainingSeconds, totalSeconds, taskTitle, type, expanded, setExpanded } = useTimer();
     const [showComplete, setShowComplete] = useState(false);
-    const [expanded, setExpanded] = useState(false);
 
     const [localMode, setLocalMode] = useState<TimerDisplayMode>(() => {
         if (typeof window !== 'undefined') {
@@ -57,7 +56,6 @@ export default function TimerWidget({ displayMode: propMode }: TimerWidgetProps)
     useEffect(() => {
         if (status === 'completed') {
             setShowComplete(true);
-            setExpanded(false);
         }
     }, [status]);
 

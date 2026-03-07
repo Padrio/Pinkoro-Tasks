@@ -13,7 +13,7 @@ import TimerWidget from '@/components/timer/TimerWidget';
 import DailyGoalWidget from '@/components/dashboard/DailyGoalWidget';
 import AchievementToast from '@/components/dashboard/AchievementToast';
 import TimeSlotReminder from '@/components/dashboard/TimeSlotReminder';
-import type { DashboardStats, DailyGoal, Settings, Task, UrgentTasks } from '@/types';
+import type { Category, DashboardStats, DailyGoal, Settings, Task, UrgentTasks } from '@/types';
 
 interface StreakData {
     current_streak: number;
@@ -44,6 +44,7 @@ interface DashboardProps {
     period: string;
     recentTasks: Task[];
     incompleteTasks: Task[];
+    categories: Category[];
     urgentTasks: UrgentTasks;
     settings: Settings;
     streak: StreakData;
@@ -59,7 +60,7 @@ function getGreeting(): string {
     return 'Guten Abend, Johanna 🌙';
 }
 
-export default function Dashboard({ stats, period, recentTasks, incompleteTasks, urgentTasks, settings, streak, level, score, achievements }: DashboardProps) {
+export default function Dashboard({ stats, period, recentTasks, incompleteTasks, categories, urgentTasks, settings, streak, level, score, achievements }: DashboardProps) {
     const { props } = usePage();
     const dailyGoal = (props as any).dailyGoal as DailyGoal | null;
     const newAchievements = (props as any).flash?.new_achievements as Array<{
@@ -87,7 +88,7 @@ export default function Dashboard({ stats, period, recentTasks, incompleteTasks,
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
-                        <DailyGoalWidget dailyGoal={dailyGoal} incompleteTasks={incompleteTasks} />
+                        <DailyGoalWidget dailyGoal={dailyGoal} incompleteTasks={incompleteTasks} categories={categories} />
                         <StatsGrid stats={stats} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <StreakWidget streak={streak} />

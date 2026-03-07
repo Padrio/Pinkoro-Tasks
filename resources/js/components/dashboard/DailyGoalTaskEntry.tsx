@@ -13,11 +13,12 @@ interface TaskEntryData {
 
 interface DailyGoalTaskEntryProps {
     entry: TaskEntryData;
+    isNew?: boolean;
     onRemove: () => void;
     onUpdate: (field: 'time_slot_start' | 'time_slot_end', value: string) => void;
 }
 
-export default function DailyGoalTaskEntry({ entry, onRemove, onUpdate }: DailyGoalTaskEntryProps) {
+export default function DailyGoalTaskEntry({ entry, isNew, onRemove, onUpdate }: DailyGoalTaskEntryProps) {
     const {
         attributes,
         listeners,
@@ -49,7 +50,10 @@ export default function DailyGoalTaskEntry({ entry, onRemove, onUpdate }: DailyG
                 <GripVertical className="w-4 h-4" />
             </button>
 
-            <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">{entry.title}</span>
+            <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">
+                {entry.title}
+                {isNew && <span className="ml-1.5 text-[10px] text-pink-500 font-medium">neu</span>}
+            </span>
 
             <Input
                 type="time"

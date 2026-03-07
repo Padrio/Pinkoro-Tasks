@@ -9,7 +9,7 @@ import type { TimerDisplayMode } from '@/types';
 const MODES_WITHOUT_TIME: TimerDisplayMode[] = ['ring_only', 'ring_percent', 'liquid_only'];
 
 export default function TimerMiniDisplay() {
-    const { status, remainingSeconds, taskTitle, type } = useTimer();
+    const { status, remainingSeconds, taskTitle, type, setExpanded } = useTimer();
     const { url } = usePage();
 
     const [displayMode, setDisplayMode] = useState<TimerDisplayMode>('ring_time');
@@ -51,11 +51,13 @@ export default function TimerMiniDisplay() {
 
     return (
         <AnimatePresence>
-            <motion.div
+            <motion.button
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium ${typeColors[type] || typeColors.pomodoro}`}
+                onClick={() => setExpanded(true)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium cursor-pointer hover:brightness-95 transition-all ${typeColors[type] || typeColors.pomodoro}`}
+                title="Timer vergrößern"
             >
                 <Timer className="w-4 h-4" />
                 <span className="font-mono-timer tabular-nums">
@@ -64,7 +66,7 @@ export default function TimerMiniDisplay() {
                 {status === 'paused' && (
                     <span className="text-xs opacity-60">pausiert</span>
                 )}
-            </motion.div>
+            </motion.button>
         </AnimatePresence>
     );
 }

@@ -233,8 +233,14 @@ function buildWalkKeyframes(direction: 'left' | 'right', screenW: number) {
 const MIN_INTERVAL_MS = 3 * 60 * 1000;
 const MAX_INTERVAL_MS = 8 * 60 * 1000;
 
-function getRandomInterval() {
-    return MIN_INTERVAL_MS + Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS);
+// Shorter intervals when timer overlay is open so cats appear more often
+const MIN_INTERVAL_EXPANDED_MS = 20 * 1000;
+const MAX_INTERVAL_EXPANDED_MS = 60 * 1000;
+
+function getRandomInterval(expanded: boolean) {
+    const min = expanded ? MIN_INTERVAL_EXPANDED_MS : MIN_INTERVAL_MS;
+    const max = expanded ? MAX_INTERVAL_EXPANDED_MS : MAX_INTERVAL_MS;
+    return min + Math.random() * (max - min);
 }
 
 type CatBehavior =
@@ -251,7 +257,7 @@ function getRandomBehavior(): CatBehavior {
     return { type: 'napInCorner' };
 }
 
-function WalkingCat({ direction, message, showMessage, colors }: { direction: 'left' | 'right'; message: string; showMessage: boolean; colors: CatColors }) {
+function WalkingCat({ direction, message, showMessage, colors, zClass }: { direction: 'left' | 'right'; message: string; showMessage: boolean; colors: CatColors; zClass: string }) {
     const [pose, setPose] = useState<CatPose>('walk1');
     const [paused, setPaused] = useState(false);
     const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
@@ -279,7 +285,7 @@ function WalkingCat({ direction, message, showMessage, colors }: { direction: 'l
 
     return (
         <motion.div
-            className="fixed bottom-1 z-50 pointer-events-none select-none"
+            className={`fixed bottom-1 ${zClass} pointer-events-none select-none`}
             initial={{ x: walkAnim.x[0] }}
             animate={{ x: walkAnim.x }}
             exit={{ opacity: 0 }}
@@ -300,13 +306,35 @@ function WalkingCat({ direction, message, showMessage, colors }: { direction: 'l
     );
 }
 
+// Custom event name for timer expanded state changes
+const TIMER_EXPANDED_EVENT = 'timer-expanded-change';
+
+export function dispatchTimerExpandedEvent(expanded: boolean) {
+    window.dispatchEvent(new CustomEvent(TIMER_EXPANDED_EVENT, { detail: expanded }));
+}
+
 export default function MotivationCat() {
     const [visible, setVisible] = useState(false);
     const [behavior, setBehavior] = useState<CatBehavior | null>(null);
     const [message, setMessage] = useState('');
     const [showMessage, setShowMessage] = useState(false);
     const [catColors, setCatColors] = useState<CatColors>(getRandomTheme);
+    const [timerExpanded, setTimerExpanded] = useState(false);
     const posRef = useRef(`${30 + Math.random() * 40}%`);
+    const expandedRef = useRef(false);
+
+    const zClass = timerExpanded ? 'z-[101]' : 'z-50';
+
+    // Listen for timer expanded custom event (avoids re-renders from TimerContext)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const expanded = (e as CustomEvent<boolean>).detail;
+            setTimerExpanded(expanded);
+            expandedRef.current = expanded;
+        };
+        window.addEventListener(TIMER_EXPANDED_EVENT, handler);
+        return () => window.removeEventListener(TIMER_EXPANDED_EVENT, handler);
+    }, []);
 
     const triggerCat = useCallback(() => {
         const b = getRandomBehavior();
@@ -331,16 +359,25 @@ export default function MotivationCat() {
         }, duration);
     }, []);
 
+    // Initial appearance after 30s
     useEffect(() => {
         const initialDelay = setTimeout(() => triggerCat(), 30000);
         return () => clearTimeout(initialDelay);
     }, [triggerCat]);
 
+    // Schedule next appearance after each one ends
     useEffect(() => {
         if (visible) return;
-        const timer = setTimeout(() => triggerCat(), getRandomInterval());
+        const timer = setTimeout(() => triggerCat(), getRandomInterval(expandedRef.current));
         return () => clearTimeout(timer);
     }, [visible, triggerCat]);
+
+    // Trigger a cat immediately when the timer overlay opens
+    useEffect(() => {
+        if (timerExpanded && !visible) {
+            triggerCat();
+        }
+    }, [timerExpanded]);
 
     return (
         <AnimatePresence>
@@ -352,12 +389,13 @@ export default function MotivationCat() {
                             message={message}
                             showMessage={showMessage}
                             colors={catColors}
+                            zClass={zClass}
                         />
                     )}
 
                     {behavior.type === 'sitAndChat' && (
                         <motion.div
-                            className="fixed bottom-1 z-50 pointer-events-none select-none"
+                            className={`fixed bottom-1 ${zClass} pointer-events-none select-none`}
                             style={{ left: posRef.current }}
                             initial={{ y: 50 }}
                             animate={{ y: 0 }}
@@ -380,7 +418,7 @@ export default function MotivationCat() {
 
                     {behavior.type === 'peekFromEdge' && (
                         <motion.div
-                            className="fixed bottom-16 z-50 pointer-events-none select-none"
+                            className={`fixed bottom-16 ${zClass} pointer-events-none select-none`}
                             style={{ [behavior.side]: 0 }}
                             initial={{ x: behavior.side === 'left' ? -40 : 40 }}
                             animate={{ x: behavior.side === 'left' ? 6 : -6 }}
@@ -409,7 +447,7 @@ export default function MotivationCat() {
 
                     {behavior.type === 'napInCorner' && (
                         <motion.div
-                            className="fixed bottom-1 right-6 z-50 pointer-events-none select-none"
+                            className={`fixed bottom-1 right-6 ${zClass} pointer-events-none select-none`}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}

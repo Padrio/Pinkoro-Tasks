@@ -30,13 +30,15 @@ import {
 } from '@/components/ui/dialog';
 import { formatMinutes, formatDeadline } from '@/lib/formatTime';
 import DailyGoalTaskEntry from './DailyGoalTaskEntry';
-import type { DailyGoal, Task } from '@/types';
+import type { Category, DailyGoal, Task } from '@/types';
 
 interface TaskEntryData {
     task_id: number;
     title: string;
     time_slot_start: string;
     time_slot_end: string;
+    is_new?: boolean;
+    category_id?: number | null;
 }
 
 interface DailyGoalDialogProps {
@@ -44,6 +46,7 @@ interface DailyGoalDialogProps {
     onClose: () => void;
     dailyGoal: DailyGoal | null;
     incompleteTasks: Task[];
+    categories?: Category[];
 }
 
 const priorityColors: Record<string, string> = {
@@ -52,10 +55,29 @@ const priorityColors: Record<string, string> = {
     low: 'bg-blue-400',
 };
 
-export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTasks }: DailyGoalDialogProps) {
+function flattenCategories(categories: Category[]): { id: number; name: string }[] {
+    const result: { id: number; name: string }[] = [];
+    for (const cat of categories) {
+        result.push({ id: cat.id, name: cat.name });
+        if (cat.children) {
+            for (const child of cat.children) {
+                result.push({ id: child.id, name: `${cat.name} / ${child.name}` });
+            }
+        }
+    }
+    return result;
+}
+
+export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTasks, categories = [] }: DailyGoalDialogProps) {
     const [endTime, setEndTime] = useState('');
     const [selectedTasks, setSelectedTasks] = useState<TaskEntryData[]>([]);
     const [processing, setProcessing] = useState(false);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [newTaskCategory, setNewTaskCategory] = useState<number | null>(null);
+    const nextTempId = useMemo(() => {
+        let id = -1;
+        return () => id--;
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -74,6 +96,8 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
                     time_slot_end: t.time_slot_end ?? '',
                 })) ?? []
             );
+            setNewTaskTitle('');
+            setNewTaskCategory(null);
         }
     }, [open, dailyGoal]);
 
@@ -86,6 +110,7 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
 
     const estimatedTotal = useMemo(() => {
         return selectedTasks.reduce((sum, entry) => {
+            if (entry.is_new) return sum;
             const task = incompleteTasks.find(t => t.id === entry.task_id);
             return sum + (task?.estimated_minutes ?? 0);
         }, 0);
@@ -96,6 +121,25 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
             ...prev,
             { task_id: task.id, title: task.title, time_slot_start: '', time_slot_end: '' },
         ]);
+    };
+
+    const handleAddNewTask = () => {
+        const title = newTaskTitle.trim();
+        if (!title) return;
+
+        setSelectedTasks(prev => [
+            ...prev,
+            {
+                task_id: nextTempId(),
+                title,
+                time_slot_start: '',
+                time_slot_end: '',
+                is_new: true,
+                category_id: newTaskCategory,
+            },
+        ]);
+        setNewTaskTitle('');
+        setNewTaskCategory(null);
     };
 
     const handleRemoveTask = (taskId: number) => {
@@ -125,11 +169,21 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
 
         router.post(route('daily-goal.store'), {
             end_time: endTime || null,
-            tasks: selectedTasks.map(t => ({
-                task_id: t.task_id,
-                time_slot_start: t.time_slot_start || null,
-                time_slot_end: t.time_slot_end || null,
-            })),
+            tasks: selectedTasks.map(t => {
+                if (t.is_new) {
+                    return {
+                        title: t.title,
+                        category_id: t.category_id ?? null,
+                        time_slot_start: t.time_slot_start || null,
+                        time_slot_end: t.time_slot_end || null,
+                    };
+                }
+                return {
+                    task_id: t.task_id,
+                    time_slot_start: t.time_slot_start || null,
+                    time_slot_end: t.time_slot_end || null,
+                };
+            }),
         }, {
             preserveState: true,
             onFinish: () => {
@@ -138,6 +192,8 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
             },
         });
     };
+
+    const flatCats = useMemo(() => flattenCategories(categories), [categories]);
 
     return (
         <Dialog open={open} onOpenChange={() => {}}>
@@ -183,6 +239,7 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
                                             <DailyGoalTaskEntry
                                                 key={entry.task_id}
                                                 entry={entry}
+                                                isNew={entry.is_new}
                                                 onRemove={() => handleRemoveTask(entry.task_id)}
                                                 onUpdate={(field, value) => handleUpdateTask(entry.task_id, field, value)}
                                             />
@@ -203,9 +260,50 @@ export default function DailyGoalDialog({ open, onClose, dailyGoal, incompleteTa
                         )}
                     </div>
 
+                    {/* Inline new task creation */}
+                    <div className="space-y-2">
+                        <Label>Neuen Task erstellen</Label>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                type="text"
+                                placeholder="Task-Name..."
+                                value={newTaskTitle}
+                                onChange={e => setNewTaskTitle(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddNewTask();
+                                    }
+                                }}
+                                className="flex-1 rounded-xl border-pink-200 focus:ring-pink-300"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={handleAddNewTask}
+                                disabled={!newTaskTitle.trim()}
+                                className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl h-9 px-3"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        {flatCats.length > 0 && (
+                            <select
+                                value={newTaskCategory ?? ''}
+                                onChange={e => setNewTaskCategory(e.target.value ? Number(e.target.value) : null)}
+                                className="w-full text-sm rounded-xl border border-pink-200 bg-white/50 px-3 py-1.5 text-gray-700 focus:ring-pink-300 focus:border-pink-300"
+                            >
+                                <option value="">Keine Kategorie</option>
+                                {flatCats.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
+
                     {availableTasks.length > 0 && (
                         <div className="space-y-2">
-                            <Label>Tasks hinzufügen</Label>
+                            <Label>Bestehende Tasks hinzufügen</Label>
                             <div className="max-h-[200px] overflow-y-auto overflow-x-hidden space-y-1 rounded-lg border border-pink-100 p-2">
                                 {availableTasks.map(task => (
                                     <button

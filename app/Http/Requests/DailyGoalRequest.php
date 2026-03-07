@@ -16,7 +16,9 @@ class DailyGoalRequest extends FormRequest
         return [
             'end_time' => 'nullable|date_format:H:i',
             'tasks' => 'present|array',
-            'tasks.*.task_id' => 'required|integer|exists:tasks,id',
+            'tasks.*.task_id' => 'nullable|integer|exists:tasks,id',
+            'tasks.*.title' => 'nullable|string|max:255',
+            'tasks.*.category_id' => 'nullable|integer|exists:categories,id',
             'tasks.*.time_slot_start' => 'nullable|date_format:H:i',
             'tasks.*.time_slot_end' => 'nullable|date_format:H:i',
         ];

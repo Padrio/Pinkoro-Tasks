@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useCallback, useRef, useEffect, useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { useSound } from './SoundContext';
+import { dispatchTimerExpandedEvent } from '@/components/layout/MotivationCat';
 import type { PomodoroSession, TimerStatus } from '@/types';
 
 export interface PendingNextTask {
@@ -18,6 +19,8 @@ interface TimerContextType {
     type: 'pomodoro' | 'short_break' | 'long_break' | 'custom';
     pomodoroInSet: number;
     pendingNextTask: PendingNextTask | null;
+    expanded: boolean;
+    setExpanded: (expanded: boolean) => void;
     startTimer: (params: {
         taskId: number;
         taskTitle: string;
@@ -44,6 +47,8 @@ const TimerContext = createContext<TimerContextType>({
     type: 'pomodoro',
     pomodoroInSet: 0,
     pendingNextTask: null,
+    expanded: false,
+    setExpanded: () => {},
     startTimer: () => {},
     pauseTimer: () => {},
     resumeTimer: () => {},
@@ -66,6 +71,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [type, setType] = useState<'pomodoro' | 'short_break' | 'long_break' | 'custom'>('pomodoro');
     const [pomodoroInSet, setPomodoroInSet] = useState(0);
     const [pendingNextTask, setPendingNextTask] = useState<PendingNextTask | null>(null);
+    const [expanded, setExpandedRaw] = useState(false);
+
+    const setExpanded = useCallback((value: boolean) => {
+        setExpandedRaw(value);
+        dispatchTimerExpandedEvent(value);
+    }, []);
 
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startedAtRef = useRef<number>(0);
@@ -102,6 +113,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 lastBeepSecondRef.current = -1;
                 clearTimer();
                 setStatus('completed');
+                setExpanded(false);
                 playSoundRef.current(
                     typeRef.current === 'pomodoro' || typeRef.current === 'custom'
                         ? 'pomodoro-end'
@@ -274,6 +286,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 type,
                 pomodoroInSet,
                 pendingNextTask,
+                expanded,
+                setExpanded,
                 startTimer,
                 pauseTimer,
                 resumeTimer,

@@ -7,11 +7,12 @@ import { Progress } from '@/components/ui/progress';
 import { formatCountdown, formatMinutes } from '@/lib/formatTime';
 import DailyGoalTaskRow from './DailyGoalTaskRow';
 import DailyGoalDialog from './DailyGoalDialog';
-import type { DailyGoal, DailyGoalTask, Task, Settings } from '@/types';
+import type { Category, DailyGoal, DailyGoalTask, Task, Settings } from '@/types';
 
 interface DailyGoalWidgetProps {
     dailyGoal: DailyGoal | null;
     incompleteTasks: Task[];
+    categories?: Category[];
 }
 
 function getTimeSlotActiveIds(tasks: DailyGoalTask[]): Set<number> {
@@ -81,7 +82,7 @@ function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
     });
 }
 
-export default function DailyGoalWidget({ dailyGoal, incompleteTasks }: DailyGoalWidgetProps) {
+export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories = [] }: DailyGoalWidgetProps) {
     const settings = usePage<{ settings: Settings }>().props.settings;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [, setTick] = useState(0);
@@ -145,6 +146,7 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks }: DailyGoa
                     onClose={() => setDialogOpen(false)}
                     dailyGoal={null}
                     incompleteTasks={incompleteTasks}
+                    categories={categories}
                 />
             </motion.div>
         );
@@ -223,6 +225,7 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks }: DailyGoa
                 onClose={() => setDialogOpen(false)}
                 dailyGoal={dailyGoal}
                 incompleteTasks={incompleteTasks}
+                categories={categories}
             />
         </motion.div>
     );

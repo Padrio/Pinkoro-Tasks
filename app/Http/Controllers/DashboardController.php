@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Task;
 use App\Services\GamificationService;
 use App\Services\SettingsService;
@@ -43,6 +44,7 @@ class DashboardController extends Controller
                 'due_today' => Task::dueToday()->ordered()->get(),
                 'due_soon' => Task::dueSoon(3)->ordered()->get(),
             ],
+            'categories' => Category::whereNull('parent_id')->ordered()->with('children')->get(),
             'settings' => $this->settings->all(),
             'streak' => $this->gamification->getStreak(),
             'level' => $this->gamification->getLevel(),
