@@ -38,9 +38,9 @@ export default function TimerMiniDisplay() {
 
     if (status === 'idle') return null;
 
-    // On Tasks page, hide mini timer when display mode doesn't show time
-    const isTasksPage = url.startsWith('/tasks');
-    if (isTasksPage && MODES_WITHOUT_TIME.includes(displayMode)) return null;
+    // On pages with a timer widget, hide mini timer when display mode doesn't show time
+    const hasTimerWidget = url === '/' || url.startsWith('/tasks');
+    if (hasTimerWidget && MODES_WITHOUT_TIME.includes(displayMode)) return null;
 
     const typeColors: Record<string, string> = {
         pomodoro: 'bg-pink-100 text-pink-700 border-pink-200',
