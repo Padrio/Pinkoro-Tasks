@@ -23,6 +23,7 @@ export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, isOver
     const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle } = useTimer();
     const [showTimerConfirm, setShowTimerConfirm] = useState(false);
     const [showTimerRunning, setShowTimerRunning] = useState(false);
+    const [showSlot, setShowSlot] = useState(false);
 
     const timerRunningForThis = (timerStatus === 'running' || timerStatus === 'paused') && timerTaskId === task.id;
     const showJetzt = !task.is_completed && (timerRunningForThis || isTimeSlotActive);
@@ -63,7 +64,13 @@ export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, isOver
                     {task.is_completed
                         ? (timeSlot ?? '\u00A0')
                         : isOverdue
-                            ? <span className="text-red-400 text-[10px] font-sans font-medium">Overdue</span>
+                            ? <span
+                                className="text-red-400 text-[10px] font-sans font-medium cursor-pointer hover:text-red-500 transition-colors"
+                                onClick={() => setShowSlot(s => !s)}
+                                title={timeSlot ?? undefined}
+                              >
+                                {showSlot && timeSlot ? timeSlot : 'Overdue'}
+                              </span>
                             : (timeSlot ? `${index}. ${timeSlot}` : `${index}.`)}
                 </span>
 
