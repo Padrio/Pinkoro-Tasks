@@ -14,10 +14,11 @@ interface DailyGoalTaskRowProps {
     task: DailyGoalTask;
     index: number;
     isTimeSlotActive: boolean;
+    isOverdue: boolean;
     settings: Settings;
 }
 
-export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, settings }: DailyGoalTaskRowProps) {
+export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, isOverdue, settings }: DailyGoalTaskRowProps) {
     const { playSound } = useSound();
     const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle } = useTimer();
     const [showTimerConfirm, setShowTimerConfirm] = useState(false);
@@ -61,7 +62,9 @@ export default function DailyGoalTaskRow({ task, index, isTimeSlotActive, settin
                 <span className="text-xs text-gray-400 w-[90px] flex-shrink-0 font-mono-timer">
                     {task.is_completed
                         ? (timeSlot ?? '\u00A0')
-                        : (timeSlot ? `${index}. ${timeSlot}` : `${index}.`)}
+                        : isOverdue
+                            ? <span className="text-red-400 text-[10px] font-sans font-medium">Overdue</span>
+                            : (timeSlot ? `${index}. ${timeSlot}` : `${index}.`)}
                 </span>
 
                 <Checkbox

@@ -41,6 +41,15 @@ function timeSlotToMinutes(slot: string | null): number {
     return h * 60 + m;
 }
 
+function isTimeSlotActive(task: DailyGoalTask): boolean {
+    if (!task.time_slot_start || !task.time_slot_end) return false;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = task.time_slot_start.split(':').map(Number);
+    const [eh, em] = task.time_slot_end.split(':').map(Number);
+    return currentMinutes >= sh * 60 + sm && currentMinutes < eh * 60 + em;
+}
+
 function isTimeSlotPast(task: DailyGoalTask): boolean {
     if (!task.time_slot_end) return false;
     const now = new Date();
@@ -95,6 +104,13 @@ function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
             active.push(task);
         }
     }
+
+    // Bubble currently-active time-slot tasks to the top
+    active.sort((a, b) => {
+        const aActive = isTimeSlotActive(a) ? 0 : 1;
+        const bActive = isTimeSlotActive(b) ? 0 : 1;
+        return aActive - bActive;
+    });
 
     // Completed: most recently completed first (top), earliest completed last (bottom)
     completed.sort((a, b) => {
@@ -226,15 +242,29 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories
                 <div className="space-y-1">
                     {(() => {
                         let incompleteIdx = 0;
-                        return sortedTasks.map((task) => (
-                            <DailyGoalTaskRow
-                                key={task.id}
-                                task={task}
-                                index={task.is_completed ? 0 : ++incompleteIdx}
-                                isTimeSlotActive={activeIds.has(task.id)}
-                                settings={settings}
-                            />
-                        ));
+                        let separatorShown = false;
+                        return sortedTasks.map((task) => {
+                            const showSeparator = task.is_completed && !separatorShown;
+                            if (showSeparator) separatorShown = true;
+                            return (
+                                <div key={task.id}>
+                                    {showSeparator && (
+                                        <div className="flex items-center gap-2 py-1.5 mt-1">
+                                            <div className="flex-1 border-t border-pink-200/40" />
+                                            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Erledigt</span>
+                                            <div className="flex-1 border-t border-pink-200/40" />
+                                        </div>
+                                    )}
+                                    <DailyGoalTaskRow
+                                        task={task}
+                                        index={task.is_completed ? 0 : ++incompleteIdx}
+                                        isTimeSlotActive={activeIds.has(task.id)}
+                                        isOverdue={!task.is_completed && isTimeSlotPast(task)}
+                                        settings={settings}
+                                    />
+                                </div>
+                            );
+                        });
                     })()}
                 </div>
             )}
