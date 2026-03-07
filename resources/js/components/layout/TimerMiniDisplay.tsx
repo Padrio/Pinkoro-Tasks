@@ -55,7 +55,10 @@ export default function TimerMiniDisplay() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                onClick={() => setExpanded(true)}
+                onClick={() => {
+                    console.log('[Pinkoro:MiniTimer] clicked → expanding');
+                    setExpanded(true);
+                }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium cursor-pointer hover:brightness-95 transition-all ${typeColors[type] || typeColors.pomodoro}`}
                 title="Timer vergrößern"
             >

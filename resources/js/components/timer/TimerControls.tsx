@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 export default function TimerControls() {
-    const { status, taskId, type, totalSeconds, remainingSeconds, pauseTimer, resumeTimer, resetTimer, completeTimer } = useTimer();
+    const { status, taskId, type, totalSeconds, remainingSeconds, pauseTimer, resumeTimer, resetTimer, completeTimer, debugSetRemaining } = useTimer();
     const { playSound } = useSound();
 
     if (status === 'idle' || status === 'completed') return null;
@@ -25,6 +25,7 @@ export default function TimerControls() {
     };
 
     return (
+        <>
         <div className="flex flex-wrap items-center justify-center gap-3">
             {status === 'running' ? (
                 <Button
@@ -77,5 +78,20 @@ export default function TimerControls() {
                 </>
             )}
         </div>
+        {import.meta.env.DEV && (
+                <div className="flex items-center justify-center gap-1.5 pt-1">
+                    <span className="text-[10px] text-gray-400 font-mono">[DEV]</span>
+                    {[3, 5, 10].map(s => (
+                        <button
+                            key={s}
+                            onClick={() => debugSetRemaining(s)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-500 font-mono transition-colors"
+                        >
+                            →{s}s
+                        </button>
+                    ))}
+                </div>
+            )}
+        </>
     );
 }

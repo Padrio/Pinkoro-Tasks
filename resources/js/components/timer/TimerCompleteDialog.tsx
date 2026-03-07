@@ -50,6 +50,9 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
         return fromIncomplete?.pomodoro_count ?? 0;
     };
 
+    // Capture type when dialog opens so completeTimer() resetting type doesn't switch view
+    const savedTypeRef = useRef(type);
+
     // Capture task info when dialog opens (before completeTimer clears it)
     const [taskChoice, setTaskChoice] = useState<'not_done' | 'done' | null>(null);
     const [showDurationPicker, setShowDurationPicker] = useState(false);
@@ -59,11 +62,25 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     const savedTaskRef = useRef<{ id: number; title: string } | null>(null);
     const savedPomodoroCountRef = useRef(0);
 
-    useEffect(() => {
-        if (open && (type === 'pomodoro' || type === 'custom')) {
+    // Synchronously update refs when dialog opens (before render uses them)
+    // This prevents the flash where savedTypeRef has a stale value from the previous dialog open.
+    const prevOpenRef = useRef(false);
+    if (open && !prevOpenRef.current) {
+        savedTypeRef.current = type;
+        if (type === 'pomodoro' || type === 'custom') {
             savedTaskRef.current = taskId ? { id: taskId, title: taskTitle } : null;
             savedPomodoroCountRef.current = getTaskPomodoroCount(taskId);
-            setTaskChoice(null);
+        }
+        console.log(`[Pinkoro:Dialog] open=true, type=${type}, savedType=${savedTypeRef.current}`);
+    }
+    prevOpenRef.current = open;
+
+    useEffect(() => {
+        if (open) {
+            if (type === 'pomodoro' || type === 'custom') {
+                setTaskChoice(null);
+            }
+
             setShowDurationPicker(false);
             setSelectedMinutes(pomodoroMin);
             setSelectedType('pomodoro');
@@ -71,19 +88,20 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
         }
     }, [open]);
 
-    // Auto-timeout: close dialog after 2 minutes (treat as "nicht erledigt")
+    // Auto-timeout: close dialog after 2 minutes
     useEffect(() => {
         if (!open) return;
         const timer = setTimeout(() => {
-            if (type === 'pomodoro' || type === 'custom') {
+            console.log('[Pinkoro:Dialog] auto-close timeout fired');
+            const wasType = savedTypeRef.current;
+            if (wasType === 'pomodoro' || wasType === 'custom') {
                 if (savedTaskRef.current) {
                     setPendingNextTask(savedTaskRef.current);
                 }
                 incrementPomodoro();
                 completeTimer({ skipServerComplete: true });
             } else {
-                handleBreakDoneWithAutoStart();
-                return;
+                completeTimer({ skipServerComplete: true });
             }
             onClose();
         }, AUTO_CLOSE_MS);
@@ -102,6 +120,7 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     };
 
     const handleTaskComplete = () => {
+        console.log('[Pinkoro:Dialog] button clicked: taskComplete');
         incrementPomodoro();
         completeTimer({ skipServerComplete: true });
         setTaskChoice('done');
@@ -114,6 +133,7 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     };
 
     const handleTaskNotDone = () => {
+        console.log('[Pinkoro:Dialog] button clicked: taskNotDone');
         incrementPomodoro();
         completeTimer({ skipServerComplete: true });
         setTaskChoice('not_done');
@@ -124,6 +144,7 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     };
 
     const handleKeinePause = () => {
+        console.log('[Pinkoro:Dialog] button clicked: keinePause');
         // If no task choice yet, treat as "nicht fertig" first
         if (taskChoice === null) {
             handleTaskNotDone();
@@ -132,6 +153,7 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     };
 
     const startNextPomodoro = () => {
+        console.log('[Pinkoro:Dialog] button clicked: startNextPomodoro');
         const taskToStart = pendingNextTask;
         if (!taskToStart) {
             onClose();
@@ -167,6 +189,7 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
     };
 
     const startBreak = (minutes: number, breakType: 'short_break' | 'long_break') => {
+        console.log(`[Pinkoro:Dialog] button clicked: startBreak (${breakType}, ${minutes}min)`);
         // If no task choice yet, treat as "nicht fertig" first
         if (taskChoice === null) {
             incrementPomodoro();
@@ -202,40 +225,53 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
         });
     };
 
-    const handleBreakDoneWithAutoStart = () => {
+    const handleBreakDoneShowPicker = () => {
+        console.log('[Pinkoro:Dialog] button clicked: weiter (break done → picker)');
         completeTimer({ skipServerComplete: true });
-        if (pendingNextTask) {
-            router.post(route('sessions.start'), {
-                task_id: pendingNextTask.id,
-                type: 'pomodoro',
-                duration_minutes: pomodoroMin,
-            }, {
-                preserveState: true,
-                onSuccess: (page: any) => {
-                    const activeSession = (page as any).props?.activeSession;
-                    startTimer({
-                        taskId: pendingNextTask.id,
-                        taskTitle: pendingNextTask.title,
-                        sessionId: activeSession?.id || 0,
-                        durationMinutes: pomodoroMin,
-                        type: 'pomodoro',
-                    });
-                    setPendingNextTask(null);
-                    onClose();
-                },
-                onError: () => {
-                    setPendingNextTask(null);
-                    onClose();
-                },
-            });
-        } else {
-            onClose();
-        }
+        setShowDurationPicker(true);
     };
 
+    const handleBreakDoneSkip = () => {
+        console.log('[Pinkoro:Dialog] button clicked: überspringen (break done → skip)');
+        completeTimer({ skipServerComplete: true });
+        setPendingNextTask(null);
+        onClose();
+    };
+
+    // Build list of available tasks for task picker (break-complete flow)
+    const availableTasks: { id: number; title: string }[] = (() => {
+        const tasks: { id: number; title: string }[] = [];
+        const seen = new Set<number>();
+        if (dailyGoal?.tasks) {
+            for (const t of [...dailyGoal.tasks].sort((a, b) => a.sort_order - b.sort_order)) {
+                if (!t.is_completed && !seen.has(t.id)) {
+                    tasks.push({ id: t.id, title: t.title });
+                    seen.add(t.id);
+                }
+            }
+        }
+        if (incompleteTasks) {
+            for (const t of incompleteTasks) {
+                if (!seen.has(t.id)) {
+                    tasks.push({ id: t.id, title: t.title });
+                    seen.add(t.id);
+                }
+            }
+        }
+        return tasks;
+    })();
+
+    // Use saved type to determine which view to show
+    const wasPomodoro = savedTypeRef.current === 'pomodoro' || savedTypeRef.current === 'custom';
+
+    const renderView = wasPomodoro
+        ? (showDurationPicker ? 'duration-picker' : 'pomodoro-complete')
+        : (showDurationPicker ? 'duration-picker' : 'break-complete');
+    console.log(`[Pinkoro:Dialog] rendering view: ${renderView}, savedType=${savedTypeRef.current}`);
+
     // POMODORO COMPLETED
-    if (type === 'pomodoro' || type === 'custom') {
-        // Duration picker sub-view
+    if (wasPomodoro) {
+        // Duration picker sub-view (shared for pomodoro "keine Pause" and break "weiter")
         if (showDurationPicker) {
             const taskName = pendingNextTask?.title ?? savedTaskRef.current?.title ?? '';
             return (
@@ -439,7 +475,121 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
         );
     }
 
-    // BREAK COMPLETED
+    // BREAK COMPLETED — with task picker + duration picker
+    if (showDurationPicker) {
+        return (
+            <AlertDialog open={open}>
+                <AlertDialogContent className="glass border-white/50">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-gray-800">
+                            <Timer className="w-6 h-6 text-pink-500" />
+                            Nächster Pomodoro
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-600">
+                            Wähle einen Task und starte den Timer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {/* Task picker */}
+                    {availableTasks.length > 0 ? (
+                        <div className="space-y-1.5">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Task</p>
+                            <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                                {availableTasks.map(task => (
+                                    <button
+                                        key={task.id}
+                                        onClick={() => setPendingNextTask(task)}
+                                        className={`w-full text-left text-sm px-3 py-2 rounded-xl transition-colors truncate ${
+                                            pendingNextTask?.id === task.id
+                                                ? 'bg-pink-100 text-pink-700 font-medium ring-1 ring-pink-300'
+                                                : 'bg-white/50 text-gray-700 hover:bg-pink-50'
+                                        }`}
+                                    >
+                                        {task.title}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-400 py-2">Keine offenen Tasks vorhanden.</p>
+                    )}
+
+                    {/* Duration picker */}
+                    <div className="space-y-2 py-2 border-t border-white/30">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Dauer</p>
+                        <Button
+                            variant={selectedType === 'pomodoro' ? 'default' : 'outline'}
+                            className={`w-full rounded-xl justify-start ${
+                                selectedType === 'pomodoro'
+                                    ? 'bg-pink-400 hover:bg-pink-500 text-white'
+                                    : 'border-pink-200 hover:bg-pink-50'
+                            }`}
+                            onClick={() => {
+                                setSelectedType('pomodoro');
+                                setSelectedMinutes(pomodoroMin);
+                            }}
+                        >
+                            Pomodoro ({pomodoroMin} Min)
+                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant={selectedType === 'custom' ? 'default' : 'outline'}
+                                className={`rounded-xl ${
+                                    selectedType === 'custom'
+                                        ? 'bg-pink-400 hover:bg-pink-500 text-white'
+                                        : 'border-pink-200 hover:bg-pink-50'
+                                }`}
+                                onClick={() => setSelectedType('custom')}
+                            >
+                                Custom
+                            </Button>
+                            {selectedType === 'custom' && (
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={120}
+                                    value={customMinutes}
+                                    onChange={(e) => setCustomMinutes(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            startNextPomodoro();
+                                        }
+                                    }}
+                                    placeholder="Minuten"
+                                    className="w-24 rounded-xl border-pink-200"
+                                    autoFocus
+                                />
+                            )}
+                        </div>
+                    </div>
+                    <AlertDialogFooter className="gap-2 sm:justify-between">
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setPendingNextTask(null);
+                                onClose();
+                            }}
+                            className="rounded-xl text-gray-400 hover:text-gray-600"
+                            size="sm"
+                        >
+                            <X className="w-4 h-4 mr-1" />
+                            Überspringen
+                        </Button>
+                        <Button
+                            onClick={startNextPomodoro}
+                            disabled={!pendingNextTask}
+                            className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl disabled:opacity-50"
+                        >
+                            <Play className="w-4 h-4 mr-2" />
+                            Starten
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        );
+    }
+
     return (
         <AlertDialog open={open}>
             <AlertDialogContent className="glass border-white/50">
@@ -451,15 +601,24 @@ export default function TimerCompleteDialog({ open, onClose }: TimerCompleteDial
                     <AlertDialogDescription className="text-gray-600">
                         {pendingNextTask
                             ? `Deine Pause ist vorbei. Nächster Task: "${pendingNextTask.title}"`
-                            : type === 'long_break'
+                            : savedTypeRef.current === 'long_break'
                                 ? 'Deine lange Pause ist vorbei. Bereit für ein neues Pomodoro-Set?'
                                 : 'Deine kurze Pause ist vorbei. Bereit für den nächsten Pomodoro?'
                         }
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <AlertDialogFooter className="gap-2 sm:justify-between">
                     <Button
-                        onClick={handleBreakDoneWithAutoStart}
+                        variant="ghost"
+                        onClick={handleBreakDoneSkip}
+                        className="rounded-xl text-gray-400 hover:text-gray-600"
+                        size="sm"
+                    >
+                        <X className="w-4 h-4 mr-1" />
+                        Überspringen
+                    </Button>
+                    <Button
+                        onClick={handleBreakDoneShowPicker}
                         className="bg-pink-400 hover:bg-pink-500 text-white rounded-xl"
                     >
                         <Play className="w-4 h-4 mr-2" />

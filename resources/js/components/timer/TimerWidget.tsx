@@ -55,9 +55,14 @@ export default function TimerWidget({ displayMode: propMode }: TimerWidgetProps)
 
     useEffect(() => {
         if (status === 'completed') {
+            console.log(`[Pinkoro:Widget] showComplete changed: false → true`);
             setShowComplete(true);
         }
     }, [status]);
+
+    useEffect(() => {
+        console.log(`[Pinkoro:Widget] expanded changed: ${expanded}`);
+    }, [expanded]);
 
     // Close expanded view on Escape
     useEffect(() => {
@@ -255,7 +260,10 @@ export default function TimerWidget({ displayMode: propMode }: TimerWidgetProps)
 
             <TimerCompleteDialog
                 open={showComplete}
-                onClose={() => setShowComplete(false)}
+                onClose={() => {
+                    console.log('[Pinkoro:Widget] showComplete changed: true → false');
+                    setShowComplete(false);
+                }}
             />
         </>
     );

@@ -35,6 +35,7 @@ interface TimerContextType {
     incrementPomodoro: () => void;
     resetPomodoroSet: () => void;
     setPendingNextTask: (task: PendingNextTask | null) => void;
+    debugSetRemaining: (seconds: number) => void;
 }
 
 const TimerContext = createContext<TimerContextType>({
@@ -57,6 +58,7 @@ const TimerContext = createContext<TimerContextType>({
     incrementPomodoro: () => {},
     resetPomodoroSet: () => {},
     setPendingNextTask: () => {},
+    debugSetRemaining: () => {},
 });
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
@@ -74,6 +76,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     const [expanded, setExpandedRaw] = useState(false);
 
     const setExpanded = useCallback((value: boolean) => {
+        console.log(`[Pinkoro:Timer] expanded: ${value}`);
         setExpandedRaw(value);
         dispatchTimerExpandedEvent(value);
     }, []);
@@ -112,6 +115,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             if (rem <= 0) {
                 lastBeepSecondRef.current = -1;
                 clearTimer();
+                console.log(`[Pinkoro:Timer] status changed: running → completed`);
                 setStatus('completed');
                 setExpanded(false);
                 playSoundRef.current(
@@ -123,6 +127,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 // Use fetch() instead of router.patch() so Inertia can't cancel it.
                 if (sessionIdRef.current && !autoCompletedRef.current) {
                     autoCompletedRef.current = true;
+                    console.log(`[Pinkoro:Timer] auto-complete fetch fired for session #${sessionIdRef.current}`);
                     const xsrf = decodeURIComponent(
                         document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
                     );
@@ -132,6 +137,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                         credentials: 'same-origin',
                         redirect: 'manual',
                     }).then(() => {
+                        console.log('[Pinkoro:Timer] router.reload() called');
                         // Refresh Inertia page data so actual_minutes updates immediately
                         router.reload();
                     }).catch(() => {});
@@ -155,6 +161,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 ? Math.max(0, total - params.initialElapsedSeconds)
                 : total;
 
+            console.log(`[Pinkoro:Timer] status changed: ${status} → running`);
+            console.log(`[Pinkoro:Timer] type: ${params.type}`);
             setTaskId(params.taskId);
             setTaskTitle(params.taskTitle);
             setSessionId(params.sessionId);
@@ -231,6 +239,13 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         setPomodoroInSet(0);
     }, []);
 
+    const debugSetRemaining = useCallback((seconds: number) => {
+        if (status !== 'running' && status !== 'paused') return;
+        pausedRemainingRef.current = seconds;
+        startedAtRef.current = Date.now();
+        setRemainingSeconds(seconds);
+    }, [status]);
+
     useEffect(() => {
         return () => clearTimer();
     }, [clearTimer]);
@@ -296,6 +311,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
                 incrementPomodoro,
                 resetPomodoroSet,
                 setPendingNextTask,
+                debugSetRemaining,
             }}
         >
             {children}

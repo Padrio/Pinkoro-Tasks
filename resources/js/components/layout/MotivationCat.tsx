@@ -324,6 +324,11 @@ export default function MotivationCat() {
     const expandedRef = useRef(false);
 
     const zClass = timerExpanded ? 'z-[101]' : 'z-50';
+    const prevZClassRef = useRef(zClass);
+    if (prevZClassRef.current !== zClass) {
+        console.log(`[Pinkoro:Cat] zClass: ${zClass}`);
+        prevZClassRef.current = zClass;
+    }
 
     // Listen for timer expanded custom event (avoids re-renders from TimerContext)
     useEffect(() => {
@@ -338,6 +343,7 @@ export default function MotivationCat() {
 
     const triggerCat = useCallback(() => {
         const b = getRandomBehavior();
+        console.log(`[Pinkoro:Cat] triggered: ${b.type}`);
         setBehavior(b);
         setMessage(getRandomMessage());
         setCatColors(getRandomTheme());
@@ -355,7 +361,10 @@ export default function MotivationCat() {
         const duration = b.type === 'napInCorner' ? 12000 : b.type === 'walkAcross' ? 14500 : 6000;
         setTimeout(() => {
             setShowMessage(false);
-            setTimeout(() => setVisible(false), 600);
+            setTimeout(() => {
+                console.log('[Pinkoro:Cat] visible: false');
+                setVisible(false);
+            }, 600);
         }, duration);
     }, []);
 
