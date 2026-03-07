@@ -124,7 +124,7 @@ function sortTasks(tasks: DailyGoalTask[]): DailyGoalTask[] {
 export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories = [] }: DailyGoalWidgetProps) {
     const settings = usePage<{ settings: Settings }>().props.settings;
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [, setTick] = useState(0);
+    const [tick, setTick] = useState(0);
 
     // Re-render every 60s to keep countdown and active-slot highlighting fresh
     useEffect(() => {
@@ -144,7 +144,7 @@ export default function DailyGoalWidget({ dailyGoal, incompleteTasks, categories
     const activeIds = dailyGoal ? getTimeSlotActiveIds(dailyGoal.tasks) : new Set<number>();
     const sortedTasks = useMemo(
         () => dailyGoal ? sortTasks(dailyGoal.tasks) : [],
-        [dailyGoal?.tasks],
+        [dailyGoal?.tasks, tick],
     );
 
     // Time budget calculation (live via tick)
