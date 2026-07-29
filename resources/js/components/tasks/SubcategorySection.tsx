@@ -166,7 +166,7 @@ export default function SubcategorySection({ category, allCategories, tasks, set
                         <div className="space-y-2 min-h-[8px]">
                             <AnimatePresence mode="popLayout">
                                 {tasks.map((task) => (
-                                    <TaskItem key={task.id} task={task} settings={settings} />
+                                    <TaskItem key={task.id} task={task} settings={settings} categories={allCategories} />
                                 ))}
                             </AnimatePresence>
                         </div>

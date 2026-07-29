@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { GripVertical, Play, Pencil, Trash2, Timer, Calendar } from 'lucide-react';
 import { getDeadlineStatus, formatDeadline } from '@/lib/formatTime';
-import type { Task, Settings } from '@/types';
+import type { Task, Category, Settings } from '@/types';
 import TaskForm from './TaskForm';
 import StartTimerConfirm from './StartTimerConfirm';
 import TimerRunningAlert from './TimerRunningAlert';
@@ -26,6 +26,7 @@ const priorityColors: Record<string, string> = {
 interface TaskItemProps {
     task: Task;
     settings: Settings;
+    categories?: Category[];
     sortMode?: 'manual' | 'deadline' | 'priority';
 }
 
@@ -36,7 +37,7 @@ const deadlineColors: Record<string, string> = {
     normal: 'bg-gray-100 text-gray-600 border-0',
 };
 
-const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, sortMode = 'manual' }, ref) => {
+const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, categories = [], sortMode = 'manual' }, ref) => {
     const { playSound } = useSound();
     const { status: timerStatus, taskId: timerTaskId, taskTitle: runningTaskTitle, totalSeconds, remainingSeconds, completeTimer } = useTimer();
     const [showEdit, setShowEdit] = useState(false);
@@ -221,7 +222,7 @@ const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, so
                 )}
             </motion.div>
 
-            <TaskForm open={showEdit} onClose={() => setShowEdit(false)} task={task} />
+            <TaskForm open={showEdit} onClose={() => setShowEdit(false)} task={task} categories={categories} />
             <StartTimerConfirm
                 open={showTimerConfirm}
                 onClose={() => setShowTimerConfirm(false)}

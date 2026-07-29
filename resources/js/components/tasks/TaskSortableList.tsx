@@ -333,7 +333,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
             <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                     {sortedActive.map((task) => (
-                        <TaskItem key={task.id} task={task} settings={settings} sortMode="priority" />
+                        <TaskItem key={task.id} task={task} settings={settings} categories={categories} sortMode="priority" />
                     ))}
                 </AnimatePresence>
                 <ArchiveSection tasks={completedTasks} categories={categories} settings={settings} />
@@ -356,7 +356,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
             <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
                     {sortedActive.map((task) => (
-                        <TaskItem key={task.id} task={task} settings={settings} sortMode="deadline" />
+                        <TaskItem key={task.id} task={task} settings={settings} categories={categories} sortMode="deadline" />
                     ))}
                 </AnimatePresence>
                 <ArchiveSection tasks={completedTasks} categories={categories} settings={settings} />

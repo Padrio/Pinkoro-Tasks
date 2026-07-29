@@ -168,7 +168,7 @@ export default function ArchiveSection({ tasks, categories, settings }: ArchiveS
                                                         <div className="pl-3 mt-1 mb-1 space-y-2">
                                                             <AnimatePresence mode="popLayout">
                                                                 {groupTasks.map((task) => (
-                                                                    <TaskItem key={task.id} task={task} settings={settings} sortMode="deadline" />
+                                                                    <TaskItem key={task.id} task={task} settings={settings} sortMode="deadline" categories={categories} />
                                                                 ))}
                                                             </AnimatePresence>
                                                         </div>
