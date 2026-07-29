@@ -23,6 +23,7 @@ export interface Task {
     estimated_minutes: number | null;
     created_at: string;
     updated_at: string;
+    deleted_at?: string | null;
     pomodoro_count?: number;
     actual_minutes?: number;
     pomodoro_sessions?: PomodoroSession[];

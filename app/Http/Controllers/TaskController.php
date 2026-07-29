@@ -33,6 +33,7 @@ class TaskController extends Controller
                 }], 'duration_minutes')
                 ->get(),
             'categories' => Category::whereNull('parent_id')->ordered()->with('children')->get(),
+            'trashedTasks' => Task::onlyTrashed()->orderByDesc('deleted_at')->get(),
             'settings' => $this->settings->all(),
         ]);
     }
@@ -76,16 +77,37 @@ class TaskController extends Controller
         return back();
     }
 
+    public function restore(Task $task): RedirectResponse
+    {
+        $task->restore();
+
+        return back();
+    }
+
+    public function forceDestroy(Task $task): RedirectResponse
+    {
+        $task->forceDelete();
+
+        return back();
+    }
+
+    public function emptyTrash(): RedirectResponse
+    {
+        Task::onlyTrashed()->get()->each->forceDelete();
+
+        return back();
+    }
+
     public function toggleComplete(Request $request, Task $task): RedirectResponse
     {
         $wasCompleted = $task->is_completed;
 
         $task->update([
-            'is_completed' => !$wasCompleted,
-            'completed_at' => !$wasCompleted ? now() : null,
+            'is_completed' => ! $wasCompleted,
+            'completed_at' => ! $wasCompleted ? now() : null,
         ]);
 
-        if (!$wasCompleted) {
+        if (! $wasCompleted) {
             // Complete running sessions with actual elapsed time
             $runningSessions = PomodoroSession::where('task_id', $task->id)
                 ->whereNull('ended_at')

@@ -4,16 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Plus, ListTodo, ArrowUpDown, Calendar, Flag } from 'lucide-react';
 import TaskForm from './TaskForm';
 import TaskSortableList from './TaskSortableList';
+import TrashSection from './TrashSection';
 import CategoryCreateButton from './CategoryCreateButton';
 import type { Task, Category, Settings } from '@/types';
 
 interface TaskListProps {
     tasks: Task[];
     categories: Category[];
+    trashedTasks?: Task[];
     settings: Settings;
 }
 
-export default function TaskList({ tasks, categories, settings }: TaskListProps) {
+export default function TaskList({ tasks, categories, trashedTasks = [], settings }: TaskListProps) {
     const [showCreate, setShowCreate] = useState(false);
     const [sortMode, setSortMode] = useState<'manual' | 'deadline' | 'priority'>(() => {
         if (typeof window !== 'undefined') {
@@ -86,6 +88,8 @@ export default function TaskList({ tasks, categories, settings }: TaskListProps)
             ) : (
                 <TaskSortableList tasks={tasks} categories={categories} settings={settings} sortMode={sortMode} />
             )}
+
+            <TrashSection tasks={trashedTasks} categories={categories} />
 
             <TaskForm open={showCreate} onClose={() => setShowCreate(false)} categories={categories} />
         </div>

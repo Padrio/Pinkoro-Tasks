@@ -3,9 +3,9 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DailyGoalController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\TaskController;
 use App\Http\Controllers\PomodoroSessionController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 // Dashboard
@@ -18,6 +18,9 @@ Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.upda
 Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 Route::patch('/tasks/{task}/toggle', [TaskController::class, 'toggleComplete'])->name('tasks.toggle');
 Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
+Route::delete('/tasks/trash/empty', [TaskController::class, 'emptyTrash'])->name('tasks.trash.empty');
+Route::post('/tasks/{task}/restore', [TaskController::class, 'restore'])->withTrashed()->name('tasks.restore');
+Route::delete('/tasks/{task}/force', [TaskController::class, 'forceDestroy'])->withTrashed()->name('tasks.force-destroy');
 
 // Categories
 Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');

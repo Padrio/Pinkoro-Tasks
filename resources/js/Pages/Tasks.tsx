@@ -7,10 +7,11 @@ import type { Task, Category, Settings } from '@/types';
 interface TasksProps {
     tasks: Task[];
     categories: Category[];
+    trashedTasks: Task[];
     settings: Settings;
 }
 
-export default function Tasks({ tasks, categories, settings }: TasksProps) {
+export default function Tasks({ tasks, categories, trashedTasks, settings }: TasksProps) {
     return (
         <>
             <Head title="Tasks" />
@@ -21,7 +22,7 @@ export default function Tasks({ tasks, categories, settings }: TasksProps) {
             >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <TaskList tasks={tasks} categories={categories} settings={settings} />
+                        <TaskList tasks={tasks} categories={categories} trashedTasks={trashedTasks} settings={settings} />
                     </div>
                     <div>
                         <TimerWidget displayMode={settings.timer_display_mode} />
