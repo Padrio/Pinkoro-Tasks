@@ -45,6 +45,7 @@ export default function StartTimerConfirm({ open, onClose, task, settings }: Sta
             duration_minutes: minutes,
         }, {
             preserveState: true,
+            preserveScroll: true,
             onError: (errors) => {
                 const message = Object.values(errors).flat().join(' ');
                 toast({

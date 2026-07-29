@@ -71,13 +71,14 @@ export default function TrashSection({ tasks, categories }: TrashSectionProps) {
     }, [categories]);
 
     const handleRestore = (task: Task) => {
-        router.post(route('tasks.restore', task.id), {}, { preserveState: true });
+        router.post(route('tasks.restore', task.id), {}, { preserveState: true, preserveScroll: true });
     };
 
     const handlePurge = () => {
         if (!taskToPurge) return;
         router.delete(route('tasks.force-destroy', taskToPurge.id), {
             preserveState: true,
+            preserveScroll: true,
             onFinish: () => setTaskToPurge(null),
         });
     };
@@ -85,6 +86,7 @@ export default function TrashSection({ tasks, categories }: TrashSectionProps) {
     const handleEmptyTrash = () => {
         router.delete(route('tasks.trash.empty'), {
             preserveState: true,
+            preserveScroll: true,
             onFinish: () => setConfirmEmpty(false),
         });
     };

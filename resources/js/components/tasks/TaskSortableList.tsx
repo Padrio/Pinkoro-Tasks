@@ -38,9 +38,11 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
-    // Sync with server data (include is_completed to re-sync on toggle)
-    const taskIds = tasks.map(t => `${t.id}-${t.category_id}-${t.is_completed}-${t.actual_minutes}-${t.pomodoro_count}`).join(',');
-    const itemIds = items.map(t => `${t.id}-${t.category_id}-${t.is_completed}-${t.actual_minutes}-${t.pomodoro_count}`).join(',');
+    // Sync with server data. updated_at covers every edited field, the rest
+    // catches changes that don't touch the task row itself (e.g. logged time).
+    const syncKey = (t: Task) => `${t.id}-${t.updated_at}-${t.category_id}-${t.is_completed}-${t.actual_minutes}-${t.pomodoro_count}`;
+    const taskIds = tasks.map(syncKey).join(',');
+    const itemIds = items.map(syncKey).join(',');
     if (taskIds !== itemIds) {
         setItems(tasks);
     }
@@ -139,7 +141,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
                 router.post(route('categories.reorder'), {
                     order: newOrder,
-                }, { preserveState: true });
+                }, { preserveState: true, preserveScroll: true });
             }
             return;
         }
@@ -172,7 +174,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
                         router.post(route('categories.reorder'), {
                             order: children.map(c => c.id),
-                        }, { preserveState: true });
+                        }, { preserveState: true, preserveScroll: true });
                     }
                 }
                 return;
@@ -214,7 +216,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
                         router.put(route('categories.update', subcatId), {
                             name: allCategories.find(c => c.id === subcatId)?.name ?? '',
                             parent_id: targetParentId,
-                        }, { preserveState: true });
+                        }, { preserveState: true, preserveScroll: true });
                     }
 
                     // Move tasks into the subcategory
@@ -227,7 +229,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
                     router.post(route('tasks.reorder'), {
                         order: newItems.map(t => ({ id: t.id, category_id: t.category_id })),
-                    }, { preserveState: true });
+                    }, { preserveState: true, preserveScroll: true });
                 }
             }
             // Dropped onto a category header → move subcategory to that parent
@@ -238,7 +240,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
                     router.put(route('categories.update', subcatId), {
                         name: allCategories.find(c => c.id === subcatId)?.name ?? '',
                         parent_id: targetParentId,
-                    }, { preserveState: true });
+                    }, { preserveState: true, preserveScroll: true });
                 }
             }
             // Dropped onto a subcategory's droppable zone (category-{id}) — treat as reorder if sibling
@@ -256,7 +258,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
 
                         router.post(route('categories.reorder'), {
                             order: children.map(c => c.id),
-                        }, { preserveState: true });
+                        }, { preserveState: true, preserveScroll: true });
                     }
                 }
             }
@@ -317,7 +319,7 @@ export default function TaskSortableList({ tasks, categories, settings, sortMode
         // Send reorder to server
         router.post(route('tasks.reorder'), {
             order: newItems.map(t => ({ id: t.id, category_id: t.category_id })),
-        }, { preserveState: true });
+        }, { preserveState: true, preserveScroll: true });
     };
 
     if (sortMode === 'priority') {

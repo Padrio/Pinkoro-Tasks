@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,16 +32,24 @@ interface TaskFormProps {
 }
 
 export default function TaskForm({ open, onClose, task, categories = [], defaultCategoryId }: TaskFormProps) {
-    const initialCategoryId = task?.category_id?.toString() || defaultCategoryId?.toString() || '';
-
-    const { data, setData, post, put, processing, errors, reset, transform } = useForm({
+    const fieldsFromTask = () => ({
         title: task?.title || '',
         description: task?.description || '',
-        category_id: initialCategoryId,
+        category_id: task?.category_id?.toString() || defaultCategoryId?.toString() || '',
         priority: task?.priority || '',
         deadline: task?.deadline?.split('T')[0] || '',
         estimated_minutes: task?.estimated_minutes?.toString() || '',
     });
+
+    const { data, setData, post, put, processing, errors, reset, transform } = useForm(fieldsFromTask());
+
+    // useForm only seeds its defaults on mount, but this dialog stays mounted
+    // between edits — re-seed on open so it never shows outdated values.
+    useEffect(() => {
+        if (open) {
+            setData(fieldsFromTask());
+        }
+    }, [open]);
 
     transform((data) => ({
         ...data,
@@ -64,10 +73,12 @@ export default function TaskForm({ open, onClose, task, categories = [], default
         e.preventDefault();
         if (task) {
             put(route('tasks.update', task.id), {
+                preserveScroll: true,
                 onSuccess: () => { reset(); onClose(); },
             });
         } else {
             post(route('tasks.store'), {
+                preserveScroll: true,
                 onSuccess: () => { reset(); onClose(); },
             });
         }

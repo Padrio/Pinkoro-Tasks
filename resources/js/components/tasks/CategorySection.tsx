@@ -90,13 +90,14 @@ export default function CategorySection({ category, categories, tasks, subcatego
         if (!category || !editName.trim()) return;
         router.put(route('categories.update', category.id), { name: editName.trim() }, {
             preserveState: true,
+            preserveScroll: true,
             onSuccess: () => setIsEditing(false),
         });
     };
 
     const handleDelete = () => {
         if (!category) return;
-        router.delete(route('categories.destroy', category.id), { preserveState: true });
+        router.delete(route('categories.destroy', category.id), { preserveState: true, preserveScroll: true });
     };
 
     const handleCreateSubcategory = () => {
@@ -106,6 +107,7 @@ export default function CategorySection({ category, categories, tasks, subcatego
             parent_id: category.id,
         }, {
             preserveState: true,
+            preserveScroll: true,
             onSuccess: () => {
                 setSubcategoryName('');
                 setShowSubcategoryInput(false);

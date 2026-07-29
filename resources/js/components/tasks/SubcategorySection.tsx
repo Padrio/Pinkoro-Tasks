@@ -64,12 +64,13 @@ export default function SubcategorySection({ category, allCategories, tasks, set
         if (!editName.trim()) return;
         router.put(route('categories.update', category.id), { name: editName.trim() }, {
             preserveState: true,
+            preserveScroll: true,
             onSuccess: () => setIsEditing(false),
         });
     };
 
     const handleDelete = () => {
-        router.delete(route('categories.destroy', category.id), { preserveState: true });
+        router.delete(route('categories.destroy', category.id), { preserveState: true, preserveScroll: true });
     };
 
     return (

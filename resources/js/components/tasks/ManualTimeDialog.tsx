@@ -27,7 +27,7 @@ export default function ManualTimeDialog({ open, onClose, task }: ManualTimeDial
         if (manualMinutes && manualMinutes > 0) {
             data.manual_minutes = manualMinutes;
         }
-        router.patch(route('tasks.toggle', task.id), data, { preserveState: true });
+        router.patch(route('tasks.toggle', task.id), data, { preserveState: true, preserveScroll: true });
         onClose();
     };
 

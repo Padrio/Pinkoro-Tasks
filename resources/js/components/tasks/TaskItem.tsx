@@ -76,7 +76,7 @@ const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, ca
             if (timerRunningForThisTask) {
                 const elapsedMinutes = Math.max(1, Math.round((totalSeconds - remainingSeconds) / 60));
                 completeTimer({ skipServerComplete: true });
-                router.patch(route('tasks.toggle', task.id), { elapsed_minutes: elapsedMinutes }, { preserveState: true });
+                router.patch(route('tasks.toggle', task.id), { elapsed_minutes: elapsedMinutes }, { preserveState: true, preserveScroll: true });
                 return;
             }
 
@@ -87,11 +87,11 @@ const TaskItem = forwardRef<HTMLDivElement, TaskItemProps>(({ task, settings, ca
             }
         }
 
-        router.patch(route('tasks.toggle', task.id), {}, { preserveState: true });
+        router.patch(route('tasks.toggle', task.id), {}, { preserveState: true, preserveScroll: true });
     };
 
     const handleDelete = () => {
-        router.delete(route('tasks.destroy', task.id), { preserveState: true });
+        router.delete(route('tasks.destroy', task.id), { preserveState: true, preserveScroll: true });
     };
 
     const handleStartTimer = () => {

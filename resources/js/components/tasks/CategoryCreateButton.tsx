@@ -12,6 +12,7 @@ export default function CategoryCreateButton() {
         if (!name.trim()) return;
         router.post(route('categories.store'), { name: name.trim() }, {
             preserveState: true,
+            preserveScroll: true,
             onSuccess: () => { setName(''); setIsCreating(false); },
         });
     };
